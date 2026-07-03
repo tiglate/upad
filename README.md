@@ -40,13 +40,13 @@ sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-d
 
 ```bash
 cd linux
-make          # -> ./trpad
+make          # -> ./upad
 make run      # build (if needed) and launch it
-make clean    # remove build/ and the trpad binary
+make clean    # remove build/ and the upad binary
 ```
 
 Each `src/*.asm` is assembled independently (`nasm -f elf64`) into
-`build/*.o`, then linked in one step with `gcc build/*.o -o trpad
+`build/*.o`, then linked in one step with `gcc build/*.o -o upad
 $(pkg-config --libs gtk4 libadwaita-1)`.
 
 ### Troubleshooting
@@ -72,13 +72,13 @@ for external GTK/GLib/libadwaita/libc functions.
 ## Run
 
 ```bash
-./trpad                 # blank "Untitled" document
-./trpad somefile.txt    # opens somefile.txt directly
+./upad                 # blank "Untitled" document
+./upad somefile.txt    # opens somefile.txt directly
 ```
 
 `org.unbloatedpad.Editor.desktop` is provided for installing into a
-desktop launcher / file manager "Open With" list; it expects `trpad` to
-be on `PATH` (e.g. `sudo install -m755 trpad /usr/local/bin/trpad`), then:
+desktop launcher / file manager "Open With" list; it expects `upad` to
+be on `PATH` (e.g. `sudo install -m755 upad /usr/local/bin/upad`), then:
 
 ```bash
 install -Dm644 org.unbloatedpad.Editor.desktop \
