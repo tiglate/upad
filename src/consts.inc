@@ -109,4 +109,11 @@ ADW_RESPONSE_DESTRUCTIVE           equ 2
 PENDING_NONE  equ 0
 PENDING_NEW   equ 1
 PENDING_OPEN  equ 2
+
+; readlink("/proc/self/exe", ...) scratch buffer -- 4096 is PATH_MAX on
+; Linux; readlink() itself doesn't NUL-terminate or reserve room for a
+; suffix, so callers appending after it (window.asm's icon search-path
+; setup) pass a shorter byte budget than this to readlink and rely on the
+; rest of the buffer as headroom.
+EXE_PATH_BUF_SIZE  equ 4096
 PENDING_QUIT  equ 3

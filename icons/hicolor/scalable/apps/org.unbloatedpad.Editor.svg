@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="64"
+   height="64"
+   viewBox="0 0 64 64"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="org.unbloatedpad.Editor.svg"
+   inkscape:version="1.4.4 (dcaf3e7d9e, 2026-05-05)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8" />
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="4.331029"
+     inkscape:cx="-3.8097182"
+     inkscape:cy="29.092394"
+     inkscape:window-width="1920"
+     inkscape:window-height="987"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg8" />
+  <!-- back cover, peeking out slightly to suggest it's open -->
+  <rect
+     x="0.58515441"
+     y="9.1111183"
+     width="43.780502"
+     height="54.081795"
+     rx="3.8629856"
+     fill="#a8916a"
+     stroke="#3a3020"
+     stroke-width="3.21916"
+     transform="rotate(-9)"
+     id="rect1" />
+  <!-- front page -->
+  <rect
+     x="14.977499"
+     y="6.4377604"
+     width="43.780502"
+     height="54.081795"
+     rx="3.8629856"
+     fill="#f2e8c8"
+     stroke="#3a3020"
+     stroke-width="3.21916"
+     id="rect2" />
+  <!-- spiral binding -->
+  <circle
+     cx="21.41581"
+     cy="6.4377604"
+     fill="#3a3020"
+     id="circle2"
+     r="2.8328559"
+     style="stroke-width:1.28767" />
+  <circle
+     cx="30.429441"
+     cy="6.4377604"
+     fill="#3a3020"
+     id="circle3"
+     r="2.8328559"
+     style="stroke-width:1.28767" />
+  <circle
+     cx="39.443073"
+     cy="6.4377604"
+     fill="#3a3020"
+     id="circle4"
+     r="2.8328559"
+     style="stroke-width:1.28767" />
+  <circle
+     cx="48.456711"
+     cy="6.4377604"
+     fill="#3a3020"
+     id="circle5"
+     r="2.8328559"
+     style="stroke-width:1.28767" />
+  <!-- text lines -->
+  <rect
+     x="21.41581"
+     y="25.752689"
+     width="30.903885"
+     height="4.1205182"
+     rx="1.2876619"
+     fill="#3a3020"
+     id="rect5"
+     style="stroke-width:1.28767" />
+  <rect
+     x="21.41581"
+     y="34.766319"
+     width="30.903885"
+     height="4.1205182"
+     rx="1.2876619"
+     fill="#3a3020"
+     id="rect6"
+     style="stroke-width:1.28767" />
+  <rect
+     x="21.41581"
+     y="43.779953"
+     width="20.602591"
+     height="4.1205182"
+     rx="1.2876619"
+     fill="#3a3020"
+     id="rect7"
+     style="stroke-width:1.28767" />
+  <!-- fountain pen resting diagonally, nib pointing to the bottom-left -->
+  <g
+     transform="matrix(-0.70516151,1.1091728,-1.1716808,-0.66754187,60.03351,22.310572)"
+     id="g8">
+    <rect
+       x="0"
+       y="-3.5"
+       width="22"
+       height="7"
+       rx="3.5"
+       fill="#3a3020"
+       id="rect8" />
+    <path
+       d="m 22,-3.5 v 7 L 35,0 Z"
+       fill="#e8c65a"
+       id="path8" />
+  </g>
+</svg>

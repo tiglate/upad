@@ -41,11 +41,17 @@ extern adw_style_manager_set_color_scheme
 ; ---- GTK4: window / application window -------------------------------------
 extern gtk_window_set_title
 extern gtk_window_set_default_size
+extern gtk_window_set_icon_name
 extern gtk_window_present
 extern gtk_application_window_new
 extern gtk_application_set_menubar
 extern gtk_application_window_set_show_menubar
 extern gtk_window_set_child
+
+; ---- GTK4/GDK: icon theme (resolving gtk_window_set_icon_name above) -------
+extern gdk_display_get_default
+extern gtk_icon_theme_get_for_display
+extern gtk_icon_theme_add_search_path
 
 ; ---- GTK4: widgets ----------------------------------------------------------
 extern gtk_box_new
@@ -196,5 +202,6 @@ extern read
 extern write
 extern close
 extern lseek
+extern readlink
 extern strlen
 extern strcmp

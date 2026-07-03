@@ -26,7 +26,29 @@ INCLUDES  := $(wildcard $(SRC_DIR)/*.inc)
 OBJECTS   := $(patsubst $(SRC_DIR)/%.asm,$(BUILD_DIR)/%.o,$(SOURCES))
 TARGET    := upad
 
-.PHONY: all clean run
+# --- install layout -----------------------------------------------------
+# PREFIX defaults to /usr/local (a local, non-packaged install); the deb
+# target below overrides it to /usr, since that's where distro packages
+# belong. DESTDIR is the usual staging-root override for packaging.
+PREFIX      ?= /usr/local
+DESTDIR     ?=
+DESKTOP_ID  := org.unbloatedpad.Editor
+BIN_DIR     := $(DESTDIR)$(PREFIX)/bin
+DESKTOP_DIR := $(DESTDIR)$(PREFIX)/share/applications
+ICON_DIR    := $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
+
+# --- .deb packaging ---------------------------------------------------
+# Runtime deps are the two libraries we link against directly (see $(LIBS)
+# above); apt/dpkg resolves their own transitive dependencies (harfbuzz,
+# pango, cairo, ...) itself, so those aren't listed here.
+DEB_VERSION    := 0.1.0
+DEB_ARCH       := amd64
+DEB_MAINTAINER := tiglate <128345445+tiglate@users.noreply.github.com>
+DEB_DEPENDS    := libgtk-4-1, libadwaita-1-0
+DEB_PKG        := upad_$(DEB_VERSION)_$(DEB_ARCH)
+DEB_STAGE      := $(BUILD_DIR)/$(DEB_PKG)
+
+.PHONY: all clean run install uninstall deb
 
 all: $(TARGET)
 
@@ -42,5 +64,35 @@ $(BUILD_DIR):
 run: $(TARGET)
 	./$(TARGET)
 
+# Installs the binary, .desktop launcher, and icon (into the hicolor icon
+# theme, named after DESKTOP_ID so icon-theme lookups by app-id -- see
+# window.asm's gtk_window_set_icon_name call -- and this project's own
+# Icon= key both resolve to it). `make install PREFIX=/usr` for a
+# system-wide (as opposed to /usr/local) install. Note this is NOT needed
+# just to see the icon in a `make && ./upad` dev build -- window.asm finds
+# icons/hicolor itself, relative to the built binary, without installing.
+install: $(TARGET)
+	install -Dm755 $(TARGET) $(BIN_DIR)/$(TARGET)
+	install -Dm644 $(DESKTOP_ID).desktop $(DESKTOP_DIR)/$(DESKTOP_ID).desktop
+	install -Dm644 icons/hicolor/scalable/apps/$(DESKTOP_ID).svg $(ICON_DIR)/$(DESKTOP_ID).svg
+
+uninstall:
+	rm -f $(BIN_DIR)/$(TARGET) $(DESKTOP_DIR)/$(DESKTOP_ID).desktop $(ICON_DIR)/$(DESKTOP_ID).svg
+
+# Stages the same install tree (via `install` above, rooted at DEB_STAGE
+# with PREFIX=/usr) plus DEBIAN/control metadata, and packs it with
+# dpkg-deb. Install with `sudo apt install ./$(DEB_PKG).deb` (plain
+# `dpkg -i` won't pull in DEB_DEPENDS automatically).
+deb: $(TARGET)
+	rm -rf $(DEB_STAGE)
+	$(MAKE) install DESTDIR=$(DEB_STAGE) PREFIX=/usr
+	mkdir -p $(DEB_STAGE)/DEBIAN $(DEB_STAGE)/usr/share/doc/upad
+	install -m644 LICENSE $(DEB_STAGE)/usr/share/doc/upad/copyright
+	printf 'Package: upad\nVersion: %s\nSection: editors\nPriority: optional\nArchitecture: %s\nDepends: %s\nMaintainer: %s\nDescription: A classic Notepad-style text editor\n Linux/GTK4+libadwaita port of TinyRetroPad, written entirely in\n hand-written x86-64 assembly.\n' \
+	    "$(DEB_VERSION)" "$(DEB_ARCH)" "$(DEB_DEPENDS)" "$(DEB_MAINTAINER)" \
+	    > $(DEB_STAGE)/DEBIAN/control
+	dpkg-deb --build --root-owner-group $(DEB_STAGE) $(DEB_PKG).deb
+	@echo "Built $(DEB_PKG).deb"
+
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(TARGET) upad_*.deb

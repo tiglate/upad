@@ -2,6 +2,7 @@
 Type=Application
 Name=UnbloatedPad
 Comment=A classic Notepad-style text editor
+Icon=org.unbloatedpad.Editor
 Exec=upad %F
 Terminal=false
 Categories=Utility;TextEditor;

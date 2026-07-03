@@ -27,8 +27,92 @@ extern setup_unsaved_tracking     ; unsaved.asm
 extern read_file_to_buffer        ; fileio.asm -- reused here for the "opened with a file argument" path
 extern clear_dirty                ; unsaved.asm -- reused here for the same reason
 extern g_current_path             ; fileio.asm -- reused here for the same reason
+extern strcopy_bounded             ; fileio.asm -- reused here purely as a bounded string-append, for register_icon_search_path's path building
+
+section .rodata
+    ; Icon name looked up via the current GtkIconTheme -- resolves to
+    ; icons/hicolor/scalable/apps/org.unbloatedpad.Editor.svg, either
+    ; relative to this executable (register_icon_search_path below, for an
+    ; uninstalled `make && ./upad` build) or under a system icon theme
+    ; directory once installed (see the Makefile's `install`/`deb`
+    ; targets). Deliberately the same string as main.asm's app_id_str and
+    ; this project's .desktop file basename/Icon= key -- GTK and the
+    ; desktop shell key icon-theme and window-manager lookups off that
+    ; shared identifier, not a filename.
+    app_icon_name_str  db "org.unbloatedpad.Editor", 0
+    proc_self_exe_str  db "/proc/self/exe", 0
+    ; Appended after this executable's own directory; register_icon_search_path.
+    ; Deliberately "/icons", NOT "/icons/hicolor": gtk_icon_theme_add_search_path
+    ; expects a directory that itself CONTAINS a theme-name subdirectory
+    ; (mirroring how "/usr/share/icons" contains "hicolor/", "Adwaita/",
+    ; etc.) -- it scans "<search_path>/hicolor/<size>/<context>/<icon>"
+    ; itself, so passing ".../icons/hicolor" directly makes every lookup
+    ; silently fail (verified empirically: has_icon() stayed false until
+    ; this was pointed at the parent instead).
+    icons_subdir_str   db "/icons", 0
+
+section .bss
+    align 8
+    ; readlink("/proc/self/exe") result, truncated at the last '/' to drop
+    ; this executable's own filename, then suffixed with icons_subdir_str
+    ; -- see register_icon_search_path. EXE_PATH_BUF_SIZE (4096, PATH_MAX)
+    ; comfortably covers both.
+    g_exe_path_buf  resb EXE_PATH_BUF_SIZE
 
 section .text
+
+; void register_icon_search_path(void) -- makes <directory containing this
+; executable>/icons an extra GtkIconTheme search path, so
+; gtk_window_set_icon_name (called right after this, in ensure_main_window)
+; can resolve "org.unbloatedpad.Editor" to
+; icons/hicolor/scalable/apps/org.unbloatedpad.Editor.svg in the source
+; tree even when the icon was never installed into a system icon theme
+; location -- i.e. the ordinary `make && ./upad` dev loop, as opposed to
+; `make install`/the .deb, which put it somewhere GTK's default search
+; path already covers. Failing silently (leaving the search path
+; unchanged) on any error here just means the icon falls back to whatever
+; the system theme already provides -- never fatal to starting the app.
+register_icon_search_path:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 16                        ; [rbp-8] = readlink's return value (byte count, or -1)
+
+    lea  rdi, [rel proc_self_exe_str]    ; arg1 = "/proc/self/exe"
+    lea  rsi, [rel g_exe_path_buf]        ; arg2 = dest buffer
+    mov  rdx, EXE_PATH_BUF_SIZE - 32       ; arg3 = byte budget, deliberately short of the buffer's full size to leave room for icons_subdir_str's append below -- readlink doesn't NUL-terminate or know about that append, so this is on us
+    CCALL readlink                          ; ssize_t readlink(const char *path, char *buf, size_t bufsiz)
+    mov  [rbp-8], rax
+    cmp  qword [rbp-8], 0
+    jle  .done                               ; /proc/self/exe unreadable, or somehow resolved to a 0-length string -- give up quietly
+
+    lea  rdi, [rel g_exe_path_buf]            ; NUL-terminate at the byte count readlink reported (it never does this itself)
+    add  rdi, [rbp-8]
+    mov  byte [rdi], 0
+
+    lea  rdi, [rel g_exe_path_buf]             ; scan backward from that NUL for the last '/', the boundary
+    mov  rcx, [rbp-8]                            ; between this executable's directory and its own filename
+.scan_for_slash:
+    dec  rcx
+    js   .done                                    ; ran off the front without finding '/' -- can't happen for a genuine absolute path, but bail rather than misread garbage as a directory
+    cmp  byte [rdi + rcx], '/'
+    jne  .scan_for_slash
+    mov  byte [rdi + rcx], 0                        ; truncate the path there: directory only, no trailing slash, drops the executable's own basename
+
+    lea  rdi, [rdi + rcx]                             ; dest = the NUL just written, i.e. right after the directory
+    lea  rsi, [rel icons_subdir_str]                   ; src = "/icons"
+    mov  rdx, 32                                        ; budget -- 7 bytes incl. NUL actually needed, 32 is just a comfortable bound
+    ICALL strcopy_bounded                                ; fileio.asm -- reused purely as a bounded append
+
+    CCALL gdk_display_get_default                          ; GdkDisplay *gdk_display_get_default(void)
+    mov  rdi, rax
+    CCALL gtk_icon_theme_get_for_display                     ; GtkIconTheme *gtk_icon_theme_get_for_display(GdkDisplay*)
+    mov  rdi, rax
+    lea  rsi, [rel g_exe_path_buf]                             ; now "<exe dir>/icons"
+    CCALL gtk_icon_theme_add_search_path                         ; void gtk_icon_theme_add_search_path(GtkIconTheme*, const char *path)
+
+.done:
+    leave
+    ret
 
 ; void on_activate(GApplication *app, gpointer user_data)
 ; Fires when the app is launched with no file arguments (a plain `trpad`,
@@ -127,6 +211,17 @@ ensure_main_window:
     mov  esi, 800                        ; width
     mov  edx, 600                         ; height
     CCALL gtk_window_set_default_size     ; void gtk_window_set_default_size(GtkWindow*, int width, int height)
+
+    ; taskbar/dock/alt-tab icon -- an explicit call rather than relying
+    ; solely on the shell resolving GApplication's app-id to this .desktop
+    ; file's Icon= key, since that resolution isn't universal across
+    ; window managers (e.g. plain X11 taskbars key off WM_CLASS/icon-name
+    ; directly instead). ICALL'd first so the lookup below can find the
+    ; icon even in an uninstalled build (see register_icon_search_path).
+    ICALL register_icon_search_path
+    mov  rdi, [rel g_window]
+    lea  rsi, [rel app_icon_name_str]
+    CCALL gtk_window_set_icon_name        ; void gtk_window_set_icon_name(GtkWindow*, const char *name)
 
     ; a plain GtkHeaderBar just for the standard minimize/maximize/close
     ; window controls -- the classic File/Edit/... menu bar built below is
