@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=UnbloatedPad
+Comment=A classic Notepad-style text editor
+Exec=upad %F
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/plain;
+StartupNotify=true
