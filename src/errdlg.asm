@@ -1,17 +1,20 @@
-; errdlg.asm -- surfaces a failed file-I/O syscall (from fileio.asm's
-; open()/lseek()/read()/write()) to the user AND to a durable log, instead
-; of the silent failure this used to be. One entry point, report_file_error,
-; does both jobs:
+; errdlg.asm -- surfaces a failure to the user AND to a durable log, instead
+; of failing silently. Two entry points:
 ;
-;   1. Shows a GtkAlertDialog (GTK 4.10+) -- a plain one-button "OK"
-;      notification, not a Yes/No choice, which is why this doesn't reuse
-;      unsaved.asm's AdwAlertDialog machinery (that one's built for
-;      multi-response confirmations; this is pure "here's what went wrong").
-;   2. Logs the same information via g_log(), so it's still recoverable
-;      after the dialog is dismissed -- GLib's default log writer sends
-;      this to the systemd journal when available, falling back to stderr
-;      otherwise, which is the standard place a GTK app's own diagnostics
-;      end up.
+;   report_error(op_summary, detail) -- the generic form: shows a
+;     GtkAlertDialog (GTK 4.10+, a plain one-button "OK" notification, not
+;     a Yes/No choice, which is why this doesn't reuse unsaved.asm's
+;     AdwAlertDialog machinery -- that one's built for multi-response
+;     confirmations, this is pure "here's what went wrong") and logs the
+;     same text via g_log(), so it's still recoverable after the dialog is
+;     dismissed -- GLib's default log writer sends this to the systemd
+;     journal when available, falling back to stderr otherwise. Called
+;     directly by printing.asm, whose failures (a GtkPrintOperation error)
+;     have no errno/path to build a detail line from.
+;
+;   report_file_error(op_summary, path, saved_errno) -- fileio.asm's
+;     open()/lseek()/read()/write() failures: builds a "<path>: <reason>"
+;     detail line via strerror(), then calls report_error with it.
 ;
 ; Both the dialog's "message" and g_log's format string are always one of
 ; this file's own static strings (never attacker/filesystem-controlled
@@ -26,6 +29,7 @@
 %include "callconv.inc"        ; CCALL/ICALL macros
 %include "extern.inc"          ; __errno_location/strerror/g_log/gtk_alert_dialog_*/g_object_unref
 
+global report_error             ; the generic form -- called from fileio.asm (indirectly, via report_file_error below) and directly from printing.asm
 global report_file_error        ; called from fileio.asm at every open()/lseek()/read()/write() failure site
 
 extern g_window                  ; main.asm -- parent for the alert dialog
@@ -44,6 +48,51 @@ section .bss
 section .text
 
 ; -------------------------------------------------------------------------
+; void report_error(const char *op_summary, const char *detail)
+;
+; op_summary: a short static string naming what failed (e.g. "Could not
+;   open file"), owned by the caller (always a .rodata literal).
+; detail: the longer explanation shown/logged alongside it -- plain data,
+;   never treated as a format string, so it's safe even if it came from
+;   the filesystem (a path can contain '%') or is itself just another
+;   static string (printing.asm's fixed failure message).
+; -------------------------------------------------------------------------
+report_error:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 32                  ; [rbp-8]=op_summary  [rbp-16]=detail  [rbp-24]=the GtkAlertDialog
+    mov  [rbp-8], rdi
+    mov  [rbp-16], rsi
+
+    ; --- show the dialog ---------------------------------------------------
+    lea  rdi, [rel fmt_percent_s]             ; arg1 = "%s" (fixed format -- see file header)
+    mov  rsi, [rbp-8]                           ; arg2 = op_summary, substituted for %s
+    CCALL gtk_alert_dialog_new                     ; GtkAlertDialog *gtk_alert_dialog_new(const char *format, ...) -- rax = a new dialog, we own this reference; no buttons were set, so GTK shows its single default dismiss button
+    mov  [rbp-24], rax
+
+    mov  rdi, [rbp-24]                            ; arg1 = self
+    mov  rsi, [rbp-16]                              ; arg2 = detail -- plain data, NOT a format string (gtk_alert_dialog_set_detail isn't variadic)
+    CCALL gtk_alert_dialog_set_detail
+
+    mov  rdi, [rbp-24]                              ; arg1 = self
+    mov  rsi, [rel g_window]                          ; arg2 = parent
+    CCALL gtk_alert_dialog_show                          ; void gtk_alert_dialog_show(GtkAlertDialog*, GtkWindow*) -- shows it and returns immediately; no response to wait for, this is pure notification
+
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref                                   ; drop our reference -- same reasoning as fileio.asm's file-dialog calls: GTK keeps its own ref alive for as long as the dialog is actually showing
+
+    ; --- log it (systemd journal if available, else stderr) ----------------
+    lea  rdi, [rel log_domain]                ; arg1 = "upad"
+    mov  esi, G_LOG_LEVEL_WARNING                ; arg2 = level
+    lea  rdx, [rel log_fmt]                        ; arg3 = "%s: %s"
+    mov  rcx, [rbp-8]                                ; arg4 = op_summary
+    mov  r8, [rbp-16]                                  ; arg5 = detail
+    CCALL g_log                                           ; void g_log(const gchar *log_domain, GLogLevelFlags log_level, const gchar *format, ...)
+
+    leave
+    ret
+
+; -------------------------------------------------------------------------
 ; void report_file_error(const char *op_summary, const char *path, int saved_errno)
 ;
 ; op_summary: a short static string naming the failed operation (e.g.
@@ -57,7 +106,7 @@ section .text
 report_file_error:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 48                  ; [rbp-8]=op_summary  [rbp-16]=path  [rbp-24]=saved_errno  [rbp-32]=reason (strerror's return, a borrowed static/TLS string)  [rbp-40]=the GtkAlertDialog
+    sub  rsp, 32                  ; [rbp-8]=op_summary  [rbp-16]=path  [rbp-24]=saved_errno  [rbp-32]=reason (strerror's return, a borrowed static/TLS string)
 
     mov  [rbp-8], rdi
     mov  [rbp-16], rsi
@@ -83,30 +132,9 @@ report_file_error:
     mov  rdx, 120                              ; comfortably within the 128-byte tail reserved above, even after ": " used a couple of bytes of it
     ICALL strcopy_bounded
 
-    ; --- show the dialog ---------------------------------------------------
-    lea  rdi, [rel fmt_percent_s]             ; arg1 = "%s" (fixed format -- see file header)
-    mov  rsi, [rbp-8]                           ; arg2 = op_summary, substituted for %s
-    CCALL gtk_alert_dialog_new                     ; GtkAlertDialog *gtk_alert_dialog_new(const char *format, ...) -- rax = a new dialog, we own this reference; no buttons were set, so GTK shows its single default dismiss button
-    mov  [rbp-40], rax
-
-    mov  rdi, [rbp-40]                            ; arg1 = self
-    lea  rsi, [rel g_errdlg_buf]                     ; arg2 = detail = "<path>: <reason>" -- plain data, NOT a format string (gtk_alert_dialog_set_detail isn't variadic), so this is safe regardless of what bytes the path contains
-    CCALL gtk_alert_dialog_set_detail
-
-    mov  rdi, [rbp-40]                              ; arg1 = self
-    mov  rsi, [rel g_window]                          ; arg2 = parent
-    CCALL gtk_alert_dialog_show                          ; void gtk_alert_dialog_show(GtkAlertDialog*, GtkWindow*) -- shows it and returns immediately; no response to wait for, this is pure notification
-
-    mov  rdi, [rbp-40]
-    CCALL g_object_unref                                   ; drop our reference -- same reasoning as fileio.asm's file-dialog calls: GTK keeps its own ref alive for as long as the dialog is actually showing
-
-    ; --- log it (systemd journal if available, else stderr) ----------------
-    lea  rdi, [rel log_domain]                ; arg1 = "upad"
-    mov  esi, G_LOG_LEVEL_WARNING                ; arg2 = level
-    lea  rdx, [rel log_fmt]                        ; arg3 = "%s: %s"
-    mov  rcx, [rbp-8]                                ; arg4 = op_summary
-    lea  r8, [rel g_errdlg_buf]                        ; arg5 = "<path>: <reason>" (already built above)
-    CCALL g_log                                           ; void g_log(const gchar *log_domain, GLogLevelFlags log_level, const gchar *format, ...)
+    mov  rdi, [rbp-8]                          ; arg1 = op_summary
+    lea  rsi, [rel g_errdlg_buf]                 ; arg2 = detail = "<path>: <reason>" (just built above)
+    ICALL report_error
 
     leave
     ret

@@ -128,3 +128,10 @@ G_LOG_LEVEL_WARNING  equ 1 << 4
 ; exact remaining space, same generous-fixed-budget style as build_title in
 ; fileio.asm.
 ERROR_BUF_SIZE  equ 4096 + 128
+
+; ---- gtk/print/gtkprintoperation.h: GtkPrintOperationAction -------------
+GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG  equ 0
+
+; ---- gtk/print/gtkprintoperation.h: GtkPrintOperationResult -------------
+GTK_PRINT_OPERATION_RESULT_ERROR  equ 0
+GTK_PRINT_OPERATION_RESULT_APPLY  equ 1

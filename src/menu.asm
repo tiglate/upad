@@ -61,9 +61,9 @@ section .rodata
     lbl_save_as     db "Save _As...", 0
     act_save_as     db "win.save-as", 0
     lbl_page_setup  db "Page Set_up...", 0
-    act_page_setup  db "win.page-setup", 0    ; NOTE: no action registered for this yet (see linux/README.md's Known Limitations) -- item renders permanently insensitive
+    act_page_setup  db "win.page-setup", 0
     lbl_print       db "_Print...", 0
-    act_print       db "win.print", 0          ; NOTE: same -- Print is not implemented
+    act_print       db "win.print", 0
     lbl_exit        db "E_xit", 0
     act_exit        db "app.quit", 0           ; note the "app." prefix, not "win." -- quitting is application-scoped, registered in actions.asm's app_actions table
 
@@ -171,12 +171,12 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_page_setup]   ; "Page Set_up..." -- stays insensitive, no action registered
-    lea  rdx, [rel act_page_setup]
+    lea  rsi, [rel lbl_page_setup]   ; "Page Set_up..."
+    lea  rdx, [rel act_page_setup]   ; "win.page-setup"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_print]        ; "_Print..." -- stays insensitive, no action registered
-    lea  rdx, [rel act_print]
+    lea  rsi, [rel lbl_print]        ; "_Print..."
+    lea  rdx, [rel act_print]        ; "win.print"
     ICALL menu_item
     mov  rdi, [rbp-16]
     xor  esi, esi

@@ -17,6 +17,7 @@ global on_dark_mode_activate     ; "win.dark-mode" GAction handler
 global toggle_bool_action        ; shared by statusbar.asm's on_status_bar_activate too
 global itoa_decimal              ; shared by statusbar.asm's update_status_label too
 global init_dark_mode_state       ; called once from window.asm, after the menu exists
+global g_font_desc_str            ; reused by printing.asm so a print job uses the same font last picked via Format > Font...
 
 extern g_window                    ; main.asm -- parent for the font-picker dialog
 extern g_textview                  ; main.asm -- Word Wrap acts on this directly

@@ -18,12 +18,18 @@
 ;
 ; CCALL: zero AL then call an external (shared-library) function via its PLT
 ; stub. AL encodes "number of vector registers used for a variadic call" per
-; the ABI; we never pass float/SSE args to any GTK/GLib/Adwaita entry point
-; in this program, so AL = 0 is always correct, whether or not the callee
-; happens to be variadic. `wrt ..plt` is required here (not optional): this
-; program links as a PIE (Ubuntu/Debian gcc default), and the linker rejects
-; a plain PC32-relative `call` straight to an undefined external symbol in a
-; PIE object -- it must go through the PLT.
+; the ABI -- relevant only to functions declared with a trailing `...`
+; (gtk_alert_dialog_new, g_log). None of those ever receive a float/SSE
+; vararg in this program (only %s string substitutions), so AL = 0 is always
+; correct there. Some NON-variadic calls (printing.asm's cairo_move_to,
+; cairo_set_source_rgb) do take fixed `double` parameters -- those go
+; straight into XMM0/XMM1/... before the CCALL, same as any other argument
+; register; AL is irrelevant to a non-variadic callee and zeroing it is
+; simply a no-op for those call sites, not a workaround. `wrt ..plt` is
+; required here (not optional): this program links as a PIE (Ubuntu/Debian
+; gcc default), and the linker rejects a plain PC32-relative `call` straight
+; to an undefined external symbol in a PIE object -- it must go through the
+; PLT.
 %macro CCALL 1
     xor eax, eax
     call %1 wrt ..plt

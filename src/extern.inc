@@ -222,3 +222,37 @@ extern gtk_alert_dialog_show
 extern gtk_uri_launcher_new
 extern gtk_uri_launcher_launch
 extern gtk_uri_launcher_launch_finish
+
+; ---- GTK4: printing (printing.asm) -------------------------------------------
+extern gtk_print_run_page_setup_dialog_async
+extern gtk_page_setup_copy
+extern gtk_print_settings_new
+extern gtk_print_settings_copy
+extern gtk_print_operation_new
+extern gtk_print_operation_set_default_page_setup
+extern gtk_print_operation_set_print_settings
+extern gtk_print_operation_get_print_settings
+extern gtk_print_operation_set_job_name
+extern gtk_print_operation_set_n_pages
+extern gtk_print_operation_run
+extern gtk_print_context_create_pango_layout
+extern gtk_print_context_get_width
+extern gtk_print_context_get_height
+extern gtk_print_context_get_cairo_context
+
+; ---- Pango: layout pagination (printing.asm) ---------------------------------
+extern pango_layout_set_text
+extern pango_layout_set_font_description
+extern pango_layout_set_width
+extern pango_layout_get_line_count
+extern pango_layout_get_iter
+extern pango_layout_iter_free
+extern pango_layout_iter_next_line
+extern pango_layout_iter_get_line_yrange
+extern pango_layout_iter_get_line_readonly
+extern pango_layout_iter_get_baseline
+
+; ---- Pango/cairo: page drawing (printing.asm) ---------------------------------
+extern pango_cairo_show_layout_line
+extern cairo_move_to
+extern cairo_set_source_rgb
