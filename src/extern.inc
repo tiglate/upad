@@ -205,3 +205,15 @@ extern lseek
 extern readlink
 extern strlen
 extern strcmp
+
+; ---- libc: errno / error-message text (errdlg.asm's error dialog + log) ------
+extern __errno_location
+extern strerror
+
+; ---- GLib: structured logging (errdlg.asm) ------------------------------------
+extern g_log
+
+; ---- GTK4: one-shot notification dialog (GTK 4.10+, errdlg.asm) --------------
+extern gtk_alert_dialog_new
+extern gtk_alert_dialog_set_detail
+extern gtk_alert_dialog_show

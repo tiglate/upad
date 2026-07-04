@@ -53,6 +53,7 @@ together, unlike the original):
 | `menu.asm` | The File/Edit/Format/View/Help `GMenu` model, wrapped in a `GtkPopoverMenuBar` |
 | `actions.asm` | Registers every `GAction` (`win.*` / `app.*`) and points it at its handler |
 | `fileio.asm` | New/Open/Save/Save As: `GtkFileDialog` for the picker, raw `open`/`read`/`write`/`close` for the bytes |
+| `errdlg.asm` | Reports a failed file-I/O syscall: a `GtkAlertDialog` for the user, `g_log` (journal/stderr) for later examination — called from `fileio.asm` |
 | `editops.asm` | Undo/Cut/Copy/Paste/Delete/Select All (GTK's own built-in text widget actions) + Time/Date |
 | `finddlg.asm` | Find, Replace, and Go To Line dialogs and the search logic behind them |
 | `format.asm` | Word Wrap, Font (via `GtkFontDialog`, applied as hand-built CSS), Dark Mode |
@@ -119,8 +120,9 @@ re-verify with a small C program before trusting these constants.
 
 - File > Print... / Page Setup... are unimplemented and intentionally
   disabled in the menu (`GtkPrintOperation` is out of scope).
-- File read/write errors in `fileio.asm` are silent — no error dialog on a
-  failed `open`/`read`/`write`.
+- A short `write()` (fewer bytes written than the buffer's length) is still
+  treated as success in `write_buffer_to_file` — only a hard failure
+  (return value < 0) goes through `errdlg.asm`'s error dialog/log path.
 - Forcing *light* mode isn't guaranteed to override a desktop theme that's
   itself always-dark (see the comment above `on_dark_mode_activate` in
   `format.asm`).

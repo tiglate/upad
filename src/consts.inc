@@ -117,3 +117,14 @@ PENDING_OPEN  equ 2
 ; rest of the buffer as headroom.
 EXE_PATH_BUF_SIZE  equ 4096
 PENDING_QUIT  equ 3
+
+; ---- glib/gmessages.h: GLogLevelFlags -----------------------------------
+G_LOG_LEVEL_WARNING  equ 1 << 4
+
+; error-dialog/log detail scratch buffer (errdlg.asm): holds "<path>: <reason>".
+; Sized for PATH_MAX (4096) plus 128 bytes of headroom for the separator and
+; strerror()'s message; errdlg.asm caps its first strcopy_bounded call at
+; ERROR_BUF_SIZE-128 (reserving that fixed tail) rather than computing the
+; exact remaining space, same generous-fixed-budget style as build_title in
+; fileio.asm.
+ERROR_BUF_SIZE  equ 4096 + 128

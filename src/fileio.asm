@@ -31,6 +31,7 @@ global g_current_path           ; reused (read/written) by unsaved.asm and windo
 extern g_window                  ; main.asm -- parent for the file-picker dialogs, target of gtk_window_set_title
 extern g_buffer                  ; main.asm -- the text buffer New/Open/Save all operate on
 extern clear_dirty                ; unsaved.asm -- called after every successful New/Open/Save so the unsaved-changes prompt won't fire needlessly
+extern report_file_error           ; errdlg.asm -- shows an error dialog and logs, called at every open()/lseek()/read()/write() failure below
 
 section .rodata
     open_dlg_title  db "Open File", 0
@@ -38,6 +39,10 @@ section .rodata
     untitled_str    db "Untitled - UnbloatedPad", 0   ; window title when there's no current file
     title_suffix    db " - UnbloatedPad", 0            ; appended after a filename
     empty_str       db 0                                ; New needs *some* non-NULL pointer for "clear the buffer", even though the length passed is 0
+
+    err_msg_open    db "Could not open file", 0          ; read_file_to_buffer's open() failed
+    err_msg_read    db "Could not read file", 0           ; read_file_to_buffer's lseek()/read() failed after a successful open()
+    err_msg_save    db "Could not save file", 0            ; write_buffer_to_file's open()/write() failed
 
 section .bss
     align 8
@@ -156,9 +161,9 @@ update_window_title:
 
 ; -------------------------------------------------------------------------
 ; void read_file_to_buffer(const char *path)
-; Reads path whole into g_buffer. Any failure (open/lseek/read) leaves the
-; text buffer untouched and is otherwise silently ignored -- a visible
-; error dialog is a documented follow-up, not yet implemented.
+; Reads path whole into g_buffer. Any open()/lseek()/read() failure leaves
+; the text buffer untouched, shows an error dialog, and logs the failure
+; (see errdlg.asm's report_file_error) instead of silently giving up.
 ;
 ; Sequence: open() for reading; lseek(SEEK_END) to find the size (then
 ; lseek back to 0, since SEEK_END leaves the file position at the end);
@@ -169,7 +174,9 @@ update_window_title:
 read_file_to_buffer:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 32                  ; [rbp-8]=fd (as a clean sign-extended 64-bit value)  [rbp-16]=file size (from lseek)  [rbp-24]=the temporary read buffer
+    sub  rsp, 48                  ; [rbp-8]=fd (as a clean sign-extended 64-bit value)  [rbp-16]=file size (from lseek)  [rbp-24]=the temporary read buffer  [rbp-32]=path (stashed since rdi gets reused as open()'s own arg1 right below, but the error branches still need it)  [rbp-40]=saved errno (captured immediately after whichever syscall fails, before any cleanup call like close()/g_free() gets a chance to overwrite it)
+
+    mov  [rbp-32], rdi              ; stash path before it's overwritten
 
     ; --- open(path, O_RDONLY, 0) ---------------------------------------
     ; arg1 (path) is already sitting in rdi, this function's own incoming argument
@@ -179,7 +186,7 @@ read_file_to_buffer:
     movsxd rax, eax                  ; sign-extend the 32-bit result into a clean 64-bit value -- only EAX is ABI-guaranteed meaningful after a call returning `int`, so this must happen before storing/comparing the full register
     mov  [rbp-8], rax                ; stash fd
     cmp  rax, 0
-    jl   .done                        ; open failed (fd < 0) -- nothing to close, nothing to free, just give up
+    jl   .open_failed                 ; open failed (fd < 0) -- nothing to close, nothing to free, just report it
 
     ; --- lseek(fd, 0, SEEK_END) to find the file's size -----------------
     mov  edi, [rbp-8]               ; arg1 = fd
@@ -188,13 +195,15 @@ read_file_to_buffer:
     CCALL lseek                        ; off_t lseek(int fd, off_t offset, int whence) -- returns the new (here: end-of-file) position, i.e. the file's size
     mov  [rbp-16], rax                  ; stash the size
     cmp  rax, 0
-    jl   .close_only                     ; lseek failed -- close the (validly opened) fd and give up, nothing was allocated yet
+    jl   .read_failed_close_only         ; lseek failed -- close the (validly opened) fd and report it, nothing was allocated yet
 
     ; --- lseek(fd, 0, SEEK_SET) to rewind back to the start --------------
     mov  edi, [rbp-8]
     xor  esi, esi                    ; offset = 0
     xor  edx, edx                     ; whence = SEEK_SET (0) -- rewind to start
     CCALL lseek                        ; rewind to start
+    cmp  rax, 0
+    jl   .read_failed_close_only        ; rewind failed -- treat the same as any other read-side failure
 
     ; --- allocate a buffer exactly big enough (plus 1, defensively) ------
     mov  rdi, [rbp-16]               ; arg1 = size (the file's byte count from lseek above)
@@ -213,7 +222,7 @@ read_file_to_buffer:
     mov  rdx, [rbp-16]                  ; arg3 = count = the file's size
     CCALL read                           ; ssize_t read(int fd, void *buf, size_t count) -- returns bytes actually read, or -1 on error
     cmp  rax, 0
-    jl   .free_and_close                  ; read failed -- skip loading anything into the buffer, but still free/close what we allocated/opened
+    jl   .read_failed_free_and_close                  ; read failed -- skip loading anything into the buffer, free/close what we allocated/opened, and report it
     mov  rdx, rax                          ; rdx = actual bytes read -> becomes the text length passed to GTK below (may be less than the file's size if the read was short, per the note above; 0 is valid too, for an empty file)
 
     ; --- hand the bytes straight to the text buffer ------------------------
@@ -222,20 +231,55 @@ read_file_to_buffer:
     ; rdx (the length) is already set from the read() result above
     CCALL gtk_text_buffer_set_text        ; void gtk_text_buffer_set_text(GtkTextBuffer*, const char *text, int len) -- replaces the whole buffer's contents
 
-.free_and_close:
     mov  rdi, [rbp-24]                   ; the temporary read buffer
     CCALL g_free                           ; always free it -- GTK copies the bytes it needs, so we don't hand off ownership
-.close_only:
     mov  edi, [rbp-8]                     ; fd
     CCALL close                             ; int close(int fd) -- return value ignored, nothing useful to do if it fails
+    jmp  .done
+
+.open_failed:
+    CCALL __errno_location                ; int *__errno_location(void) -- capture errno now, even though there's nothing to clean up on this path yet, to keep the same shape as the branches below
+    mov  eax, [rax]
+    mov  [rbp-40], eax
+    lea  rdi, [rel err_msg_open]            ; arg1 = op_summary
+    mov  rsi, [rbp-32]                        ; arg2 = path
+    mov  edx, [rbp-40]                          ; arg3 = saved errno
+    ICALL report_file_error
+    jmp  .done
+
+.read_failed_close_only:
+    CCALL __errno_location                ; captured before close() below gets a chance to overwrite errno
+    mov  eax, [rax]
+    mov  [rbp-40], eax
+    mov  edi, [rbp-8]
+    CCALL close
+    lea  rdi, [rel err_msg_read]
+    mov  rsi, [rbp-32]
+    mov  edx, [rbp-40]
+    ICALL report_file_error
+    jmp  .done
+
+.read_failed_free_and_close:
+    CCALL __errno_location                ; captured before g_free()/close() below get a chance to overwrite errno
+    mov  eax, [rax]
+    mov  [rbp-40], eax
+    mov  rdi, [rbp-24]
+    CCALL g_free
+    mov  edi, [rbp-8]
+    CCALL close
+    lea  rdi, [rel err_msg_read]
+    mov  rsi, [rbp-32]
+    mov  edx, [rbp-40]
+    ICALL report_file_error
 .done:
     leave
     ret
 
 ; -------------------------------------------------------------------------
 ; void write_buffer_to_file(const char *path)
-; Writes the whole text buffer out to path (create/truncate). Silently
-; ignores open()/write() failures -- same documented follow-up as above.
+; Writes the whole text buffer out to path (create/truncate). Any
+; open()/write() failure shows an error dialog and logs it (see
+; errdlg.asm's report_file_error) instead of silently giving up.
 ;
 ; Sequence: get the buffer's full text as one string (bounds + get_text);
 ; strlen it (GTK doesn't hand back a length alongside the string); open()
@@ -245,14 +289,18 @@ read_file_to_buffer:
 write_buffer_to_file:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 192
+    sub  rsp, 208
     ; [rbp-8]=path (the incoming argument, saved immediately since every
     ;               call below is free to clobber rdi)
     ; [rbp-16]=fd (sign-extended, same reasoning as read_file_to_buffer)
     ; [rbp-24]=text (the buffer's full contents, as returned by GTK -- owned, must g_free)
     ; [rbp-32]=textlen (from strlen(text))
     ; [rbp-112..-33] = start iter (80 bytes, GTK_TEXT_ITER_SIZE)
-    ; [rbp-192..-113] = end iter (80 bytes) -- together, 192 bytes of locals, a clean multiple of 16
+    ; [rbp-192..-113] = end iter (80 bytes)
+    ; [rbp-200]=saved errno, captured immediately after whichever syscall
+    ;           below fails, before any cleanup call (close()/g_free()) can
+    ;           overwrite it -- kept past the two iters rather than
+    ;           interleaved, so none of their existing offsets had to move
     mov  [rbp-8], rdi
 
     ; --- get iterators spanning the whole buffer --------------------------
@@ -282,26 +330,52 @@ write_buffer_to_file:
     movsxd rax, eax                               ; sign-extend the 32-bit result before storing/comparing (see read_file_to_buffer for why)
     mov  [rbp-16], rax
     cmp  rax, 0
-    jl   .free_only                                ; open failed -- nothing to write or close, but we still own `text` and must free it
+    jl   .open_failed                              ; open failed -- nothing to write or close, but we still own `text` and must free it (and report the failure)
 
     ; --- write(fd, text, textlen) -------------------------------------------
     ; single call, same reasoning as read(): our own files are never
     ; large enough in practice to need a partial-write retry loop. A
-    ; short write here would silently save less than the full document,
-    ; which is the one place in this file a real error dialog would help
-    ; most -- see linux/README.md's Known Limitations.
+    ; short write (rax >= 0 but < textlen) still reports success here --
+    ; only a hard failure (rax < 0) is treated as an error below.
     mov  edi, [rbp-16]                          ; arg1 = fd
     mov  rsi, [rbp-24]                            ; arg2 = text
     mov  rdx, [rbp-32]                             ; arg3 = textlen
-    CCALL write                                      ; ssize_t write(int fd, const void *buf, size_t count) -- return value (bytes actually written) ignored, see note above
+    CCALL write                                      ; ssize_t write(int fd, const void *buf, size_t count) -- returns bytes actually written, or -1 on error
+    cmp  rax, 0
+    jl   .write_failed                                ; write failed -- close+free still needed, then report it
 
     mov  edi, [rbp-16]                            ; fd
     CCALL close                                     ; return value ignored
-
-.free_only:
     mov  rdi, [rbp-24]                            ; the text GTK gave us
-    CCALL g_free                                    ; always free it, whether or not the write above happened
+    CCALL g_free                                    ; always free it
+    jmp  .done
 
+.open_failed:
+    CCALL __errno_location
+    mov  eax, [rax]
+    mov  [rbp-200], eax
+    mov  rdi, [rbp-24]                            ; still own `text`, must free it regardless of the open failure
+    CCALL g_free
+    lea  rdi, [rel err_msg_save]                    ; arg1 = op_summary
+    mov  rsi, [rbp-8]                                 ; arg2 = path
+    mov  edx, [rbp-200]                                ; arg3 = saved errno
+    ICALL report_file_error
+    jmp  .done
+
+.write_failed:
+    CCALL __errno_location                        ; captured before close()/g_free() below get a chance to overwrite errno
+    mov  eax, [rax]
+    mov  [rbp-200], eax
+    mov  edi, [rbp-16]
+    CCALL close
+    mov  rdi, [rbp-24]
+    CCALL g_free
+    lea  rdi, [rel err_msg_save]
+    mov  rsi, [rbp-8]
+    mov  edx, [rbp-200]
+    ICALL report_file_error
+
+.done:
     leave
     ret
 
