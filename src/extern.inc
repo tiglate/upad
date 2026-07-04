@@ -217,3 +217,8 @@ extern g_log
 extern gtk_alert_dialog_new
 extern gtk_alert_dialog_set_detail
 extern gtk_alert_dialog_show
+
+; ---- GTK4: URI launcher (GTK 4.10+, about.asm's Help > View Help) ------------
+extern gtk_uri_launcher_new
+extern gtk_uri_launcher_launch
+extern gtk_uri_launcher_launch_finish

@@ -42,6 +42,7 @@ extern on_font_activate          ; format.asm
 extern on_status_bar_activate    ; statusbar.asm
 extern on_dark_mode_activate     ; format.asm
 extern on_about_activate         ; about.asm
+extern on_view_help_activate     ; about.asm
 extern on_new_requested          ; unsaved.asm -- dirty-check wrapper around fileio.asm's on_new_activate
 extern on_open_requested         ; unsaved.asm -- dirty-check wrapper around fileio.asm's on_open_activate
 extern on_quit_requested         ; unsaved.asm -- dirty-check wrapper around on_quit_activate (below)
@@ -68,6 +69,7 @@ section .rodata
     act_status_bar_state  db "true", 0    ; starts checked -- the status bar is visible from launch
     act_dark_mode_name    db "dark-mode", 0
     act_about_name        db "about", 0
+    act_view_help_name    db "view-help", 0
 
 section .data
     align 8
@@ -84,7 +86,7 @@ section .data
     app_actions_count equ 1
 
     align 8
-    ; struct GActionEntry win_actions[14] -- everything scoped to the
+    ; struct GActionEntry win_actions[15] -- everything scoped to the
     ; window's own action map ("win." prefix). Each row is one 64-byte
     ; GActionEntry: name, activate, parameter_type, state, change_state,
     ; then 3 reserved qwords -- see consts.inc's GACTION_ENTRY_* offsets.
@@ -103,7 +105,8 @@ section .data
         dq act_status_bar_name,on_status_bar_activate,      0, act_status_bar_state, 0,  0, 0, 0   ; stateful -> checkable menu item, starts checked
         dq act_dark_mode_name, on_dark_mode_activate,       0, 0,                    0,  0, 0, 0   ; deliberately stateless -- format.asm manages dark/light itself and rewrites the menu label directly instead of using GTK's checkbox rendering
         dq act_about_name,     on_about_activate,           0, 0,                    0,  0, 0, 0
-    win_actions_count equ 14
+        dq act_view_help_name, on_view_help_activate,       0, 0,                    0,  0, 0, 0
+    win_actions_count equ 15
 
 section .text
 
@@ -138,7 +141,7 @@ setup_win_actions:
     mov  rbp, rsp
     mov  rdi, [rel g_window]           ; arg1 = action map = the main window
     lea  rsi, [rel win_actions]        ; arg2 = the GActionEntry array above
-    mov  edx, win_actions_count        ; arg3 = 14
+    mov  edx, win_actions_count        ; arg3 = 15
     xor  ecx, ecx                      ; arg4 = user_data = NULL
     CCALL g_action_map_add_action_entries
     ICALL setup_textops                 ; registers Cut/Copy/Paste/Undo/Delete/Select All separately, since they share one dynamically-parameterized handler rather than fitting the static GActionEntry table shape -- see editops.asm

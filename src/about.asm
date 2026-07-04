@@ -12,10 +12,15 @@
 %include "extern.inc"          ; extern declarations for every GTK/Adw call used below
 
 global on_about_activate       ; the "win.about" GAction handler, called from actions.asm's win_actions table
+global on_view_help_activate   ; the "win.view-help" GAction handler, called from actions.asm's win_actions table
 
-extern g_window                 ; main window (main.asm/window.asm) -- About is presented as a child of it
+extern g_window                 ; main window (main.asm/window.asm) -- About is presented as a child of it, and passed as GtkUriLauncher's parent
 
 section .rodata
+    ; this port's own GitHub repo (as opposed to website_str above, which
+    ; deliberately points at the original Windows TinyRetroPad this was
+    ; ported from) -- what Help > View Help opens
+    help_url_str  db "https://github.com/tiglate/upad", 0
     ; AdwAboutDialog text fields. Every one of these is just a plain
     ; NUL-terminated C string handed to a dedicated setter -- no string
     ; formatting/concatenation needed anywhere in this file.
@@ -96,3 +101,47 @@ on_about_activate:
 
     leave                                  ; mov rsp, rbp; pop rbp -- tear down our frame
     ret                                    ; back to whatever invoked the "about" action (GTK's action-activation machinery)
+
+; void on_view_help_activate(GSimpleAction *action, GVariant *parameter, gpointer user_data)
+; Help > View Help: opens this project's GitHub repo in the user's default
+; browser via GtkUriLauncher (GTK 4.10+, async -- same shape as
+; fileio.asm's GtkFileDialog calls: show/launch and return immediately,
+; the real "did it work" callback fires later).
+on_view_help_activate:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 16                  ; [rbp-8] = the GtkUriLauncher object, needed across the two calls below
+
+    lea  rdi, [rel help_url_str]     ; arg1 = uri
+    CCALL gtk_uri_launcher_new          ; GtkUriLauncher *gtk_uri_launcher_new(const char *uri) -- rax = new launcher, owned by us until handed off below
+    mov  [rbp-8], rax
+
+    mov  rdi, [rbp-8]                  ; arg1 = self
+    mov  rsi, [rel g_window]             ; arg2 = parent
+    xor  edx, edx                          ; arg3 = cancellable = NULL
+    lea  rcx, [rel on_view_help_finished]    ; arg4 = callback
+    xor  r8, r8                                ; arg5 = user_data = NULL
+    CCALL gtk_uri_launcher_launch                 ; void gtk_uri_launcher_launch(GtkUriLauncher*, GtkWindow*, GCancellable*, GAsyncReadyCallback, gpointer) -- shows/launches, returns immediately
+
+    mov  rdi, [rbp-8]
+    CCALL g_object_unref                             ; drop our reference -- the async op holds its own ref while running, same reasoning as fileio.asm's file-dialog calls
+
+    leave
+    ret
+
+; void on_view_help_finished(GObject *source, GAsyncResult *res, gpointer user_data)
+; The GAsyncReadyCallback for gtk_uri_launcher_launch above. There's
+; nothing useful to do differently on success vs. failure (no dialog is
+; more actionable than "the browser either opened or it didn't"), but the
+; _finish call still has to be made to release the async operation's
+; internal resources.
+on_view_help_finished:
+    push rbp
+    mov  rbp, rsp
+    ; source (rdi) and res (rsi) already positioned correctly for the
+    ; *_finish(self, result, error) call, same reasoning as fileio.asm's
+    ; on_open_finished
+    xor  edx, edx                 ; arg3 = error = NULL, ignored
+    CCALL gtk_uri_launcher_launch_finish   ; gboolean gtk_uri_launcher_launch_finish(GtkUriLauncher*, GAsyncResult*, GError**) -- return value ignored
+    pop  rbp
+    ret

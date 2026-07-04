@@ -11,16 +11,24 @@
 ; rendered insensitive by GTK, so this whole tree can be built once and
 ; "filled in" stage by stage.
 ;
-; GMenu shape reminder, since the whole file is built from three GLib
+; GMenu shape reminder, since the whole file is built from four GLib
 ; calls repeated many times: g_menu_new() makes an empty GMenu (a
 ; GMenuModel subclass); g_menu_append(menu, label, detailed_action) adds
 ; one leaf item to it; g_menu_append_submenu(parent, label, submenu)
-; nests one GMenu inside another as a labelled drop-down. Every "append a
-; submenu" call is immediately followed by g_object_unref on the
-; just-built submenu: g_menu_append_submenu takes its own reference, so
-; our local one is no longer needed -- the submenu stays alive because
-; its parent (eventually the popover menu bar widget, which lives for the
-; whole program) still holds a reference to it.
+; nests one GMenu inside another as a labelled drop-down;
+; g_menu_append_section(parent, label, section) nests one GMenu inside
+; another the same way, but rendered inline (no nested drop-down) with a
+; separator line drawn between it and whatever came before/after --
+; that's the only way a GMenu model tree produces the classic horizontal
+; menu separator, which is why File and Edit below are each built as
+; several small per-section GMenu objects (label always NULL -- these are
+; unlabeled groups, the separator is the only visible effect) rather than
+; one flat list of items. Every "append a submenu"/"append a section"
+; call is immediately followed by g_object_unref on the just-built
+; GMenu: both take their own reference, so our local one is no longer
+; needed -- the submenu/section stays alive because its parent
+; (eventually the popover menu bar widget, which lives for the whole
+; program) still holds a reference to it.
 
 %include "consts.inc"          ; GTK_ORIENTATION_* (unused directly here, included for consistency)
 %include "callconv.inc"        ; CCALL/ICALL macros
@@ -96,6 +104,8 @@ section .rodata
     act_dark_mode   db "win.dark-mode", 0
 
     ; ---- Help ----
+    lbl_view_help   db "_View Help", 0
+    act_view_help   db "win.view-help", 0
     lbl_about       db "_About UnbloatedPad", 0
     act_about       db "win.about", 0
 
@@ -119,45 +129,75 @@ menu_item:
 build_menubar:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 16              ; two local slots, reused across all five menus:
+    sub  rsp, 32              ; three local slots, reused across all five menus:
                                ; [rbp-8]  = menu_bar (the top-level GMenu, lives for the whole function)
                                ; [rbp-16] = "current submenu" scratch -- whichever of File/Edit/Format/View/Help we're building right now
+                               ; [rbp-24] = "current section" scratch -- only File and Edit below split their submenu into several of these (see the GMenu-shape comment above), one at a time
 
     CCALL g_menu_new           ; GMenu *g_menu_new(void) -- the top-level menu bar model
     mov  [rbp-8], rax          ; menu_bar
 
     ; =================== File ===================
-    CCALL g_menu_new           ; a fresh empty GMenu for the File drop-down
+    CCALL g_menu_new           ; the File drop-down itself -- now just a container of sections, no leaf items appended to it directly
     mov  [rbp-16], rax
 
-    mov  rdi, [rbp-16]         ; menu = File submenu
+    ; --- section 1: New, Open, Save, Save As ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]         ; menu = section 1
     lea  rsi, [rel lbl_new]    ; label = "_New"
     lea  rdx, [rel act_new]    ; action = "win.new"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_open]   ; "_Open..."
     lea  rdx, [rel act_open]   ; "win.open"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_save]   ; "_Save"
     lea  rdx, [rel act_save]   ; "win.save"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_save_as]   ; "Save _As..."
     lea  rdx, [rel act_save_as]   ; "win.save-as"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-16]          ; parent = File submenu
+    xor  esi, esi                ; label = NULL -- unlabeled section, just produces a separator
+    mov  rdx, [rbp-24]            ; section = what we just built
+    CCALL g_menu_append_section     ; void g_menu_append_section(GMenu*, const gchar *label, GMenuModel *section) -- takes its own ref
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref              ; drop our local ref, same reasoning as g_menu_append_submenu below
+
+    ; --- section 2: Page Setup, Print (separator above, from section 1) ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_page_setup]   ; "Page Set_up..." -- stays insensitive, no action registered
     lea  rdx, [rel act_page_setup]
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_print]        ; "_Print..." -- stays insensitive, no action registered
     lea  rdx, [rel act_print]
     ICALL menu_item
     mov  rdi, [rbp-16]
+    xor  esi, esi
+    mov  rdx, [rbp-24]
+    CCALL g_menu_append_section
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref
+
+    ; --- section 3: Exit (separator above, from section 2) ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_exit]   ; "E_xit"
     lea  rdx, [rel act_exit]   ; "app.quit"
     ICALL menu_item
+    mov  rdi, [rbp-16]
+    xor  esi, esi
+    mov  rdx, [rbp-24]
+    CCALL g_menu_append_section
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref
 
     ; nest the finished File submenu into the menu bar under the label "_File"
     mov  rdi, [rbp-8]              ; parent = menu_bar
@@ -168,53 +208,92 @@ build_menubar:
     CCALL g_object_unref           ; drop our local ref -- menu_bar (via append_submenu) now owns the only one that matters
 
     ; =================== Edit ===================
-    CCALL g_menu_new
+    CCALL g_menu_new                ; the Edit drop-down itself -- same sections-as-separators approach as File above
     mov  [rbp-16], rax             ; reuse the same scratch slot for the Edit submenu
 
-    mov  rdi, [rbp-16]
+    ; --- section 1: Undo ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_undo]       ; "_Undo"
     lea  rdx, [rel act_undo]       ; "win.undo"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-16]              ; parent = Edit submenu
+    xor  esi, esi                     ; label = NULL
+    mov  rdx, [rbp-24]
+    CCALL g_menu_append_section
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref
+
+    ; --- section 2: Cut, Copy, Paste, Delete (separator above) ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_cut]        ; "Cu_t"
     lea  rdx, [rel act_cut]        ; "win.cut"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_copy]       ; "_Copy"
     lea  rdx, [rel act_copy]       ; "win.copy"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_paste]      ; "_Paste"
     lea  rdx, [rel act_paste]      ; "win.paste"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_delete]     ; "De_lete"
     lea  rdx, [rel act_delete]     ; "win.delete"
     ICALL menu_item
     mov  rdi, [rbp-16]
+    xor  esi, esi
+    mov  rdx, [rbp-24]
+    CCALL g_menu_append_section
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref
+
+    ; --- section 3: Find, Find Next, Replace, Go To (separator above) ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_find]       ; "_Find..."
     lea  rdx, [rel act_find]       ; "win.find"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_find_next]  ; "Find _Next"
     lea  rdx, [rel act_find_next]  ; "win.find-next"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_replace]    ; "_Replace..."
     lea  rdx, [rel act_replace]    ; "win.replace"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_goto]       ; "_Go To..."
     lea  rdx, [rel act_goto]       ; "win.go-to-line"
     ICALL menu_item
     mov  rdi, [rbp-16]
+    xor  esi, esi
+    mov  rdx, [rbp-24]
+    CCALL g_menu_append_section
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref
+
+    ; --- section 4: Select All, Time/Date (separator above) ---
+    CCALL g_menu_new
+    mov  [rbp-24], rax
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_select_all] ; "Select _All"
     lea  rdx, [rel act_select_all] ; "win.select-all"
     ICALL menu_item
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_time_date]  ; "Time/_Date"
     lea  rdx, [rel act_time_date]  ; "win.insert-time-date"
     ICALL menu_item
+    mov  rdi, [rbp-16]
+    xor  esi, esi
+    mov  rdx, [rbp-24]
+    CCALL g_menu_append_section
+    mov  rdi, [rbp-24]
+    CCALL g_object_unref
 
     mov  rdi, [rbp-8]               ; parent = menu_bar
     lea  rsi, [rel sub_edit]        ; label = "_Edit"
@@ -275,6 +354,10 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-16], rax
 
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel lbl_view_help]   ; "_View Help" -- opens this project's GitHub repo (about.asm)
+    lea  rdx, [rel act_view_help]   ; "win.view-help"
+    ICALL menu_item
     mov  rdi, [rbp-16]
     lea  rsi, [rel lbl_about]       ; "_About UnbloatedPad"
     lea  rdx, [rel act_about]       ; "win.about"
