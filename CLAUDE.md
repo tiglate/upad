@@ -22,6 +22,7 @@ line of actual editor logic calls straight into the `libgtk-4` /
 make          # -> ./upad
 make run      # build (if needed) and launch it
 make clean    # remove build/ and the upad binary
+make release  # clean rebuild, then strip debug info -> a ~58% smaller ./upad
 ```
 
 Each `src/*.asm` is assembled independently (`nasm -f elf64 -g -F dwarf -I src/`)
@@ -29,6 +30,14 @@ into `build/*.o`, then linked in one step against
 `$(pkg-config --libs gtk4 libadwaita-1)`. There is no test suite — validate
 changes by building and by running `./upad` (and `./upad somefile.txt`)
 manually.
+
+The version number lives in one place, the `.version` file at the repo
+root — never hardcoded in the Makefile or in any `.asm` file. The Makefile
+reads it for `DEB_VERSION` and generates `build/version.inc` from it (a
+single `version_str db "...", 0`), which `src/about.asm` `%include`s for
+the About dialog's version field. To bump the version, edit `.version`
+only; `build/version.inc` is regenerated automatically and gitignored
+(it's derived, like everything else under `build/`).
 
 Requires: `nasm`, `gcc`, `pkg-config`, `libgtk-4-dev`, `libadwaita-1-dev`
 (>= 1.5, for GTK 4.10-era Font/Find/Replace/Go To dialog APIs). If
@@ -61,7 +70,7 @@ together, unlike the original):
 | `statusbar.asm` | The "Ln X, Col Y" status bar |
 | `linenum.asm` | View > Line Numbers (on by default): a `GtkDrawingArea` dropped into the text view's own gutter (`gtk_text_view_set_gutter`), hand-drawn per visible line with Pango/cairo |
 | `unsaved.asm` | Tracks unsaved changes; interposes a Save/Discard/Cancel prompt in front of New/Open/Quit/window-close |
-| `about.asm` | Help > About, via `AdwAboutDialog` |
+| `about.asm` | Help > About, via `AdwAboutDialog` (version field from generated `build/version.inc`, see above) |
 | `accels.asm` | Keyboard accelerators (`Ctrl+N`, `F3`, ...) for actions with no built-in GTK binding |
 | `consts.inc` | Every enum/flag/struct-layout constant, each sourced from the installed system headers (comment above each block names the header) |
 | `extern.inc` | `extern` declarations for every GTK/GLib/libadwaita/libc function called from assembly |

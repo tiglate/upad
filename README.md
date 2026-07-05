@@ -89,11 +89,22 @@ sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-d
 make          # -> ./upad
 make run      # build (if needed) and launch it
 make clean    # remove build/ and the upad binary
+make release  # clean rebuild, then strip debug info -> a leaner ./upad
 ```
 
 Each `src/*.asm` is assembled independently (`nasm -f elf64 -g -F dwarf`)
 into `build/*.o`, then linked in one step against
 `$(pkg-config --libs gtk4 libadwaita-1)`.
+
+The default build keeps DWARF debug info (handy for `gdb`), which makes
+up a big chunk of the binary on disk even though it's never loaded into
+memory at runtime. `make release` does a clean rebuild and strips it —
+📉 **~58% smaller** (115KB → 49KB as of this writing), no behavior change.
+
+🔖 The version number has exactly one home: the `.version` file at the
+repo root — not the Makefile, not any `.asm` file. It feeds both `.deb`
+packaging and the About dialog (via a small generated `build/version.inc`
+`src/about.asm` includes). Bump it by editing `.version`, nothing else.
 
 ### 🩹 Troubleshooting
 
@@ -129,6 +140,13 @@ sudo make uninstall               # removes everything make install put down
 make deb                          # builds upad_<version>_amd64.deb (installs under /usr)
 ```
 
+Both `install` and `deb` always build through `release` first, so what
+actually ships is the stripped binary, never the debug one.
+
+📦 Publishing a [GitHub Release](../../releases) also builds and attaches
+`upad_<version>_amd64.deb` automatically — see
+`.github/workflows/publish-deb.yml`.
+
 `PREFIX`/`DESTDIR` behave the usual way if you'd rather stage or
 redirect the install. Once installed, `org.unbloatedpad.Editor.desktop`
 shows up in your launcher and in "Open With" for text files, icon and
@@ -154,7 +172,7 @@ crammed together, unlike the original:
 | `statusbar.asm` | The "Ln X, Col Y" status bar |
 | `linenum.asm` | 🔢 View > Line Numbers (on by default): a `GtkDrawingArea` dropped into the text view's own gutter (`gtk_text_view_set_gutter`), hand-drawn per visible line with Pango/cairo |
 | `unsaved.asm` | Tracks unsaved changes; interposes a Save/Discard/Cancel prompt in front of New/Open/Quit/window-close |
-| `about.asm` | Help > View Help (opens this repo) and Help > About, via `AdwAboutDialog` |
+| `about.asm` | Help > View Help (opens this repo) and Help > About, via `AdwAboutDialog` (version field from generated `build/version.inc`) |
 | `accels.asm` | Keyboard accelerators (`Ctrl+N`, `F3`, ...) for actions with no built-in GTK binding |
 | `consts.inc` | Every enum/flag/struct-layout constant, each sourced from the installed system headers (see the comment above each block) |
 | `extern.inc` | `extern` declarations for every GTK/GLib/libadwaita/Pango/cairo/libc function called from assembly |
