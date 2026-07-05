@@ -10,13 +10,13 @@ ASM       := nasm
 ASMFLAGS  := -f elf64 -g -F dwarf -I src/ -I build/
 CC        := gcc
 
-PKGS      := gtk4 libadwaita-1
+PKGS      := gtk4 libadwaita-1 uchardet
 LIBS      := $(shell /usr/bin/pkg-config --libs $(PKGS) 2>/dev/null)
 
 ifeq ($(strip $(LIBS)),)
-$(error pkg-config could not find "$(PKGS)". Install libgtk-4-dev and \
-libadwaita-1-dev, and if pkg-config still can't see them, see the \
-"Troubleshooting" section in README.md)
+$(error pkg-config could not find "$(PKGS)". Install libgtk-4-dev, \
+libadwaita-1-dev, and libuchardet-dev, and if pkg-config still can't see \
+them, see the "Troubleshooting" section in README.md)
 endif
 
 GLIB_COMPILE_RESOURCES := $(shell command -v glib-compile-resources 2>/dev/null)
@@ -67,13 +67,14 @@ DESKTOP_DIR := $(DESTDIR)$(PREFIX)/share/applications
 ICON_DIR    := $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
 
 # --- .deb packaging ---------------------------------------------------
-# Runtime deps are the two libraries we link against directly (see $(LIBS)
-# above); apt/dpkg resolves their own transitive dependencies (harfbuzz,
-# pango, cairo, ...) itself, so those aren't listed here.
+# Runtime deps are the three libraries we link against directly (see
+# $(LIBS) above); apt/dpkg resolves their own transitive dependencies
+# (harfbuzz, pango, cairo, libstdc++ for uchardet, ...) itself, so those
+# aren't listed here.
 DEB_VERSION    := $(VERSION)
 DEB_ARCH       := amd64
 DEB_MAINTAINER := tiglate <128345445+tiglate@users.noreply.github.com>
-DEB_DEPENDS    := libgtk-4-1, libadwaita-1-0
+DEB_DEPENDS    := libgtk-4-1, libadwaita-1-0, libuchardet0
 DEB_PKG        := upad_$(DEB_VERSION)_$(DEB_ARCH)
 DEB_STAGE      := $(BUILD_DIR)/$(DEB_PKG)
 

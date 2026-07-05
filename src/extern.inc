@@ -33,6 +33,15 @@ extern gtk_builder_get_object
 extern g_utf8_validate
 extern g_convert
 
+; ---- uchardet: charset detection (encoding.asm) --------------------------
+; Plain C ABI, no GObject involved -- uchardet_t is an opaque pointer, not
+; a GObject, so there's no g_object_unref here, just uchardet_delete.
+extern uchardet_new
+extern uchardet_handle_data
+extern uchardet_data_end
+extern uchardet_get_charset
+extern uchardet_delete
+
 ; ---- GApplication / GAction ----------------------------------------------
 extern g_application_run
 extern g_application_quit
