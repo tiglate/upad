@@ -27,6 +27,7 @@
 
 global mark_dirty                ; called by on_buffer_changed below, and (indirectly documented) nowhere else -- the buffer's own "changed" signal is the only thing that should ever mark it dirty
 global clear_dirty               ; called from fileio.asm after every successful New/Open/Save, and from this file's own on_unsaved_response after a successful Save-from-prompt
+global g_dirty                   ; read by fileio.asm's build_title, to prepend the unsaved-changes marker to the window title
 global setup_unsaved_tracking    ; called once from window.asm, after g_window/g_buffer both exist
 global on_new_requested          ; registered in actions.asm's win_actions table IN PLACE OF fileio.asm's on_new_activate
 global on_open_requested         ; same, in place of on_open_activate
@@ -41,6 +42,7 @@ extern on_save_as_activate           ; fileio.asm -- fallback when "Save" is cho
 extern finish_save_current_path      ; fileio.asm -- writes g_current_path + clears the unsaved-changes flag, once the encoding (if ambiguous) is settled
 extern ensure_encoding_resolved       ; encoding.asm -- gates finish_save_current_path behind a Convert/Keep-original prompt if needed
 extern on_quit_activate               ; actions.asm -- the REAL Quit implementation (unconditional g_application_quit)
+extern update_window_title            ; fileio.asm -- re-run whenever g_dirty actually flips, so its unsaved-changes marker stays in sync
 
 section .rodata
     sig_changed       db "changed", 0            ; GtkTextBuffer's own "the content changed" signal
@@ -66,15 +68,35 @@ section .bss
 
 section .text
 
-; void mark_dirty(void) -- the whole function is one instruction; not
-; worth a stack frame for something this simple with no calls inside it.
+; void mark_dirty(void)
+; Sets g_dirty and, only on the clean -> dirty transition (not on every
+; subsequent keystroke while already dirty), refreshes the window title so
+; its unsaved-changes marker (fileio.asm's build_title) appears.
 mark_dirty:
+    push rbp
+    mov  rbp, rsp
+    mov  rax, [rel g_dirty]
+    test rax, rax
+    jnz  .already_dirty            ; no title change needed -- the marker is already showing
     mov  qword [rel g_dirty], 1
+    ICALL update_window_title
+.already_dirty:
+    pop  rbp
     ret
 
-; void clear_dirty(void) -- same reasoning, no frame needed.
+; void clear_dirty(void)
+; Clears g_dirty and, only on the dirty -> clean transition, refreshes the
+; window title so the unsaved-changes marker disappears.
 clear_dirty:
+    push rbp
+    mov  rbp, rsp
+    mov  rax, [rel g_dirty]
+    test rax, rax
+    jz   .already_clean             ; nothing to drop -- the marker wasn't showing
     mov  qword [rel g_dirty], 0
+    ICALL update_window_title
+.already_clean:
+    pop  rbp
     ret
 
 ; void on_buffer_changed(GtkTextBuffer *buffer, gpointer user_data)

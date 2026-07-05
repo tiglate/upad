@@ -37,6 +37,7 @@ global g_current_path           ; reused (read/written) by unsaved.asm and windo
 extern g_window                  ; main.asm -- parent for the file-picker dialogs, target of gtk_window_set_title
 extern g_buffer                  ; main.asm -- the text buffer New/Open/Save all operate on
 extern clear_dirty                ; unsaved.asm -- called after every successful New/Open/Save so the unsaved-changes prompt won't fire needlessly
+extern g_dirty                     ; unsaved.asm -- read by build_title below to decide whether to prepend the unsaved-changes marker
 extern report_file_error           ; errdlg.asm -- shows an error dialog and logs, called at every open()/lseek()/read()/write() failure below
 extern reset_encoding_state          ; encoding.asm -- called on New, and internally by decode_and_load_into_buffer on every Open
 extern decode_and_load_into_buffer    ; encoding.asm -- UTF-8 validation/transcoding, called from read_file_to_buffer below
@@ -53,6 +54,12 @@ section .rodata
     err_msg_open    db "Could not open file", 0          ; read_file_to_buffer's open() failed
     err_msg_read    db "Could not read file", 0           ; read_file_to_buffer's lseek()/read() failed after a successful open()
     err_msg_save    db "Could not save file", 0            ; write_buffer_to_file's open()/write() failed
+
+    ; U+25CF BLACK CIRCLE (UTF-8: E2 97 8F) + a trailing space, prepended to
+    ; the window title while unsaved.asm's g_dirty is set; written as raw
+    ; bytes rather than a literal character so the result doesn't depend on
+    ; this source file's own encoding.
+    dirty_marker    db 0xE2, 0x97, 0x8F, " ", 0
 
 section .bss
     align 8
@@ -89,33 +96,46 @@ strcopy_bounded:
 
 ; -------------------------------------------------------------------------
 ; char *build_title(const char *basename_or_null)
-; Formats g_title_buf as "Untitled - UnbloatedPad" (NULL) or
-; "<basename> - UnbloatedPad", and returns a pointer to it. g_title_buf is
-; a single static 1KiB scratch buffer -- comfortably covers a max-length
-; (255 byte) POSIX filename plus the fixed suffix, and the title is
-; consumed immediately by gtk_window_set_title, so there's no reentrancy
-; concern (nothing else needs g_title_buf to still hold a previous
-; result by the time this is called again).
+; Formats g_title_buf as "[marker]Untitled - UnbloatedPad" (NULL) or
+; "[marker]<basename> - UnbloatedPad", and returns a pointer to it. [marker]
+; is "● " when unsaved.asm's g_dirty is set, otherwise nothing -- this is
+; the one place that actually assembles the title string, so it's also the
+; one place that needs to know about the unsaved-changes flag. g_title_buf
+; is a single static 1KiB scratch buffer -- comfortably covers the marker
+; plus a max-length (255 byte) POSIX filename plus the fixed suffix, and
+; the title is consumed immediately by gtk_window_set_title, so there's no
+; reentrancy concern (nothing else needs g_title_buf to still hold a
+; previous result by the time this is called again).
 ; -------------------------------------------------------------------------
 build_title:
     push rbp
     mov  rbp, rsp
-    ; no locals needed -- rdi (the incoming basename_or_null) is only
-    ; read once, at the very top, before anything could clobber it
+    sub  rsp, 16                  ; [rbp-8] = basename_or_null (stashed since the marker is written first, before rdi's argument is needed again)
+    mov  [rbp-8], rdi
 
-    test rdi, rdi                  ; was a basename given at all?
+    ; --- prepend the unsaved-changes marker, if any ---------------------
+    lea  rdi, [rel g_title_buf]      ; dest = start of the scratch buffer
+    mov  rax, [rel g_dirty]           ; unsaved.asm
+    test rax, rax
+    jz   .have_dest                    ; not dirty -- dest stays at the very start, nothing to prepend
+    lea  rsi, [rel dirty_marker]         ; src = "● "
+    mov  rdx, 16
+    ICALL strcopy_bounded
+    mov  rdi, rax                        ; dest = continue right after the marker
+.have_dest:
+
+    mov  rax, [rbp-8]              ; was a basename given at all?
+    test rax, rax
     jnz  .have_name                 ; yes -- go build "<basename> - UnbloatedPad"
     ; --- no file yet: just "Untitled - UnbloatedPad" -------------------
-    lea  rdi, [rel g_title_buf]      ; dest = scratch buffer
     lea  rsi, [rel untitled_str]     ; src = "Untitled - UnbloatedPad"
-    mov  rdx, TITLE_BUF_SIZE          ; max = the whole buffer's size
+    mov  rdx, TITLE_BUF_SIZE          ; max = the whole buffer's size (generous fixed budget, same reasoning as below)
     ICALL strcopy_bounded
     lea  rax, [rel g_title_buf]       ; return value = pointer to the buffer (strcopy_bounded's own return, the NUL position, isn't what callers of build_title want -- they want the start of the string)
     jmp  .done
 
 .have_name:
-    mov  rsi, rdi                  ; capture the basename into rsi -- must happen BEFORE rdi is overwritten below, since it's the same register being reused for a different purpose
-    lea  rdi, [rel g_title_buf]     ; dest = scratch buffer
+    mov  rsi, [rbp-8]               ; the basename
     mov  rdx, TITLE_BUF_SIZE          ; max = the whole buffer
     ICALL strcopy_bounded              ; copies the basename in; rax = pointer to the NUL right after it
     ; rax = end of copied basename; 32 bytes is far more than the fixed
@@ -129,7 +149,7 @@ build_title:
     lea  rax, [rel g_title_buf]        ; return value = start of the buffer again (not strcopy_bounded's own return this time either)
 
 .done:
-    pop  rbp
+    leave
     ret
 
 ; -------------------------------------------------------------------------
