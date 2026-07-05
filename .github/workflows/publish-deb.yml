@@ -2,8 +2,11 @@ name: Publish Debian package
 
 # Fires only when a GitHub Release is published (not on drafts, edits, or
 # ordinary pushes/tags) -- builds the .deb via `make deb`, which always
-# goes through the Makefile's stripped `release` build (see Makefile), and
-# attaches the result to that same release as a downloadable asset.
+# goes through the Makefile's stripped `release` build (see Makefile) and
+# reads its version from .version, the project's single source of truth
+# for the version number (NOT this release's own tag name -- see .version
+# at the repo root), and attaches the result to that same release as a
+# downloadable asset.
 on:
   release:
     types: [published]
@@ -23,14 +26,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev
 
-      - name: Derive package version from the release tag
-        id: version
-        run: |
-          TAG="${{ github.event.release.tag_name }}"
-          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
-
       - name: Build .deb package
-        run: make deb DEB_VERSION=${{ steps.version.outputs.version }}
+        run: make deb
 
       - name: Upload .deb to the release
         env:
