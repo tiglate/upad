@@ -1,0 +1,38 @@
+name: Publish Debian package
+
+# Fires only when a GitHub Release is published (not on drafts, edits, or
+# ordinary pushes/tags) -- builds the .deb via `make deb`, which always
+# goes through the Makefile's stripped `release` build (see Makefile), and
+# attaches the result to that same release as a downloadable asset.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write # needed for `gh release upload` to attach the asset
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev
+
+      - name: Derive package version from the release tag
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build .deb package
+        run: make deb DEB_VERSION=${{ steps.version.outputs.version }}
+
+      - name: Upload .deb to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" upad_*.deb --clobber
