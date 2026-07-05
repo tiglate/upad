@@ -59,6 +59,7 @@ together, unlike the original):
 | `finddlg.asm` | Find, Replace, and Go To Line dialogs and the search logic behind them |
 | `format.asm` | Word Wrap, Font (via `GtkFontDialog`, applied as hand-built CSS), Dark Mode |
 | `statusbar.asm` | The "Ln X, Col Y" status bar |
+| `linenum.asm` | View > Line Numbers (on by default): a `GtkDrawingArea` dropped into the text view's own gutter (`gtk_text_view_set_gutter`), hand-drawn per visible line with Pango/cairo |
 | `unsaved.asm` | Tracks unsaved changes; interposes a Save/Discard/Cancel prompt in front of New/Open/Quit/window-close |
 | `about.asm` | Help > About, via `AdwAboutDialog` |
 | `accels.asm` | Keyboard accelerators (`Ctrl+N`, `F3`, ...) for actions with no built-in GTK binding |
@@ -133,4 +134,6 @@ re-verify with a small C program before trusting these constants.
   the Save As it triggers is asynchronous, so the original New/Open/Quit
   action is dropped rather than chained after it — documented, not a bug
   to silently patch over.
-- No line-numbers gutter (matches the original's default-off build flag).
+- The line-numbers gutter (`linenum.asm`) draws its digits in a fixed
+  mid-gray, not a theme-aware color — readable in both light and dark mode
+  without `linenum.asm` needing to track `format.asm`'s dark-mode state too.

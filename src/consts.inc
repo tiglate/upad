@@ -135,3 +135,11 @@ GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG  equ 0
 ; ---- gtk/print/gtkprintoperation.h: GtkPrintOperationResult -------------
 GTK_PRINT_OPERATION_RESULT_ERROR  equ 0
 GTK_PRINT_OPERATION_RESULT_APPLY  equ 1
+
+; ---- gtk/gtktextview.h: GtkTextWindowType -------------------------------
+GTK_TEXT_WINDOW_LEFT  equ 3
+
+; ---- linenum.asm: arbitrary UI pixel constants (not header-sourced, same
+;      status as FONT_CSS_BUF_SIZE/STATUS_BUF_SIZE above) ----------------
+LINE_NUMBER_RIGHT_PAD       equ 8   ; gap between the rightmost digit and the text view's own content
+LINE_NUMBER_GUTTER_PADDING  equ 16  ; total horizontal padding (both sides) added to the measured digit-sample width when sizing the gutter

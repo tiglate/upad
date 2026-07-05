@@ -256,3 +256,20 @@ extern pango_layout_iter_get_baseline
 extern pango_cairo_show_layout_line
 extern cairo_move_to
 extern cairo_set_source_rgb
+
+; ---- GTK4: line-number gutter (linenum.asm) ------------------------------------
+extern gtk_text_view_set_gutter
+extern gtk_text_view_get_visible_rect
+extern gtk_text_view_get_line_at_y
+extern gtk_text_view_get_line_yrange
+extern gtk_text_view_buffer_to_window_coords
+extern gtk_text_iter_forward_line
+extern gtk_drawing_area_new
+extern gtk_drawing_area_set_draw_func
+extern gtk_drawing_area_set_content_width
+extern gtk_widget_create_pango_layout
+extern gtk_widget_queue_draw
+extern gtk_scrolled_window_get_vadjustment
+extern pango_layout_get_pixel_size
+extern pango_cairo_show_layout
+extern gtk_text_buffer_get_line_count

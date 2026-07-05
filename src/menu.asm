@@ -30,12 +30,12 @@
 ; (eventually the popover menu bar widget, which lives for the whole
 ; program) still holds a reference to it.
 
-%include "consts.inc"          ; GTK_ORIENTATION_* (unused directly here, included for consistency)
-%include "callconv.inc"        ; CCALL/ICALL macros
-%include "extern.inc"          ; extern g_menu_new/g_menu_append/g_menu_append_submenu/gtk_popover_menu_bar_new_from_model/g_object_unref
+%include "consts.inc"    ; GTK_ORIENTATION_* (unused directly here, included for consistency)
+%include "callconv.inc"  ; CCALL/ICALL macros
+%include "extern.inc"    ; extern g_menu_new/g_menu_append/g_menu_append_submenu/gtk_popover_menu_bar_new_from_model/g_object_unref
 
-global build_menubar            ; called once from window.asm
-global g_view_menu               ; exposed so format.asm's Dark Mode toggle can rewrite this submenu's item text in place
+global build_menubar  ; called once from window.asm
+global g_view_menu    ; exposed so format.asm's Dark Mode toggle can rewrite this submenu's item text in place
 
 section .bss
     align 8
@@ -102,6 +102,8 @@ section .rodata
     act_status_bar  db "win.status-bar", 0
     lbl_dark_mode   db "Dark _Mode", 0          ; initial label text; format.asm's relabel_dark_mode_item swaps this for "Light _Mode" once dark mode is active (this is a plain stateless action, not a checkbox -- see format.asm)
     act_dark_mode   db "win.dark-mode", 0
+    lbl_line_numbers db "_Line Numbers", 0       ; also a stateful boolean action -> checkable item; kept AFTER Dark Mode rather than before it so DARK_MODE_MENU_INDEX (consts.inc) doesn't need to change
+    act_line_numbers db "win.line-numbers", 0
 
     ; ---- Help ----
     lbl_view_help   db "_View Help", 0
@@ -117,9 +119,9 @@ section .text
 ; instead of three (load rdi/rsi/rdx, then CCALL). Trivial, but it's what
 ; keeps build_menubar below from being three times as long.
 menu_item:
-    push rbp                      ; save caller's frame pointer
-    mov  rbp, rsp                 ; establish frame (no locals -- args already sit exactly where g_menu_append wants them)
-    CCALL g_menu_append            ; void g_menu_append(GMenu *menu, const gchar *label, const gchar *detailed_action)
+    push rbp             ; save caller's frame pointer
+    mov  rbp, rsp        ; establish frame (no locals -- args already sit exactly where g_menu_append wants them)
+    CCALL g_menu_append  ; void g_menu_append(GMenu *menu, const gchar *label, const gchar *detailed_action)
     pop  rbp
     ret
 
@@ -134,8 +136,8 @@ build_menubar:
                                ; [rbp-16] = "current submenu" scratch -- whichever of File/Edit/Format/View/Help we're building right now
                                ; [rbp-24] = "current section" scratch -- only File and Edit below split their submenu into several of these (see the GMenu-shape comment above), one at a time
 
-    CCALL g_menu_new           ; GMenu *g_menu_new(void) -- the top-level menu bar model
-    mov  [rbp-8], rax          ; menu_bar
+    CCALL g_menu_new   ; GMenu *g_menu_new(void) -- the top-level menu bar model
+    mov  [rbp-8], rax  ; menu_bar
 
     ; =================== File ===================
     CCALL g_menu_new           ; the File drop-down itself -- now just a container of sections, no leaf items appended to it directly
@@ -144,26 +146,26 @@ build_menubar:
     ; --- section 1: New, Open, Save, Save As ---
     CCALL g_menu_new
     mov  [rbp-24], rax
-    mov  rdi, [rbp-24]         ; menu = section 1
-    lea  rsi, [rel lbl_new]    ; label = "_New"
-    lea  rdx, [rel act_new]    ; action = "win.new"
+    mov  rdi, [rbp-24]       ; menu = section 1
+    lea  rsi, [rel lbl_new]  ; label = "_New"
+    lea  rdx, [rel act_new]  ; action = "win.new"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_open]   ; "_Open..."
-    lea  rdx, [rel act_open]   ; "win.open"
+    lea  rsi, [rel lbl_open]  ; "_Open..."
+    lea  rdx, [rel act_open]  ; "win.open"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_save]   ; "_Save"
-    lea  rdx, [rel act_save]   ; "win.save"
+    lea  rsi, [rel lbl_save]  ; "_Save"
+    lea  rdx, [rel act_save]  ; "win.save"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_save_as]   ; "Save _As..."
-    lea  rdx, [rel act_save_as]   ; "win.save-as"
+    lea  rsi, [rel lbl_save_as]  ; "Save _As..."
+    lea  rdx, [rel act_save_as]  ; "win.save-as"
     ICALL menu_item
-    mov  rdi, [rbp-16]          ; parent = File submenu
+    mov  rdi, [rbp-16]           ; parent = File submenu
     xor  esi, esi                ; label = NULL -- unlabeled section, just produces a separator
-    mov  rdx, [rbp-24]            ; section = what we just built
-    CCALL g_menu_append_section     ; void g_menu_append_section(GMenu*, const gchar *label, GMenuModel *section) -- takes its own ref
+    mov  rdx, [rbp-24]           ; section = what we just built
+    CCALL g_menu_append_section  ; void g_menu_append_section(GMenu*, const gchar *label, GMenuModel *section) -- takes its own ref
     mov  rdi, [rbp-24]
     CCALL g_object_unref              ; drop our local ref, same reasoning as g_menu_append_submenu below
 
@@ -171,12 +173,12 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_page_setup]   ; "Page Set_up..."
-    lea  rdx, [rel act_page_setup]   ; "win.page-setup"
+    lea  rsi, [rel lbl_page_setup]  ; "Page Set_up..."
+    lea  rdx, [rel act_page_setup]  ; "win.page-setup"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_print]        ; "_Print..."
-    lea  rdx, [rel act_print]        ; "win.print"
+    lea  rsi, [rel lbl_print]  ; "_Print..."
+    lea  rdx, [rel act_print]  ; "win.print"
     ICALL menu_item
     mov  rdi, [rbp-16]
     xor  esi, esi
@@ -189,8 +191,8 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_exit]   ; "E_xit"
-    lea  rdx, [rel act_exit]   ; "app.quit"
+    lea  rsi, [rel lbl_exit]  ; "E_xit"
+    lea  rdx, [rel act_exit]  ; "app.quit"
     ICALL menu_item
     mov  rdi, [rbp-16]
     xor  esi, esi
@@ -200,26 +202,26 @@ build_menubar:
     CCALL g_object_unref
 
     ; nest the finished File submenu into the menu bar under the label "_File"
-    mov  rdi, [rbp-8]              ; parent = menu_bar
-    lea  rsi, [rel sub_file]       ; label = "_File"
-    mov  rdx, [rbp-16]             ; submenu = what we just built
-    CCALL g_menu_append_submenu    ; void g_menu_append_submenu(GMenu*, const gchar *label, GMenuModel *submenu) -- takes its own ref
+    mov  rdi, [rbp-8]            ; parent = menu_bar
+    lea  rsi, [rel sub_file]     ; label = "_File"
+    mov  rdx, [rbp-16]           ; submenu = what we just built
+    CCALL g_menu_append_submenu  ; void g_menu_append_submenu(GMenu*, const gchar *label, GMenuModel *submenu) -- takes its own ref
     mov  rdi, [rbp-16]
     CCALL g_object_unref           ; drop our local ref -- menu_bar (via append_submenu) now owns the only one that matters
 
     ; =================== Edit ===================
-    CCALL g_menu_new                ; the Edit drop-down itself -- same sections-as-separators approach as File above
-    mov  [rbp-16], rax             ; reuse the same scratch slot for the Edit submenu
+    CCALL g_menu_new    ; the Edit drop-down itself -- same sections-as-separators approach as File above
+    mov  [rbp-16], rax  ; reuse the same scratch slot for the Edit submenu
 
     ; --- section 1: Undo ---
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_undo]       ; "_Undo"
-    lea  rdx, [rel act_undo]       ; "win.undo"
+    lea  rsi, [rel lbl_undo]  ; "_Undo"
+    lea  rdx, [rel act_undo]  ; "win.undo"
     ICALL menu_item
-    mov  rdi, [rbp-16]              ; parent = Edit submenu
-    xor  esi, esi                     ; label = NULL
+    mov  rdi, [rbp-16]  ; parent = Edit submenu
+    xor  esi, esi       ; label = NULL
     mov  rdx, [rbp-24]
     CCALL g_menu_append_section
     mov  rdi, [rbp-24]
@@ -229,20 +231,20 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_cut]        ; "Cu_t"
-    lea  rdx, [rel act_cut]        ; "win.cut"
+    lea  rsi, [rel lbl_cut]  ; "Cu_t"
+    lea  rdx, [rel act_cut]  ; "win.cut"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_copy]       ; "_Copy"
-    lea  rdx, [rel act_copy]       ; "win.copy"
+    lea  rsi, [rel lbl_copy]  ; "_Copy"
+    lea  rdx, [rel act_copy]  ; "win.copy"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_paste]      ; "_Paste"
-    lea  rdx, [rel act_paste]      ; "win.paste"
+    lea  rsi, [rel lbl_paste]  ; "_Paste"
+    lea  rdx, [rel act_paste]  ; "win.paste"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_delete]     ; "De_lete"
-    lea  rdx, [rel act_delete]     ; "win.delete"
+    lea  rsi, [rel lbl_delete]  ; "De_lete"
+    lea  rdx, [rel act_delete]  ; "win.delete"
     ICALL menu_item
     mov  rdi, [rbp-16]
     xor  esi, esi
@@ -255,20 +257,20 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_find]       ; "_Find..."
-    lea  rdx, [rel act_find]       ; "win.find"
+    lea  rsi, [rel lbl_find]  ; "_Find..."
+    lea  rdx, [rel act_find]  ; "win.find"
     ICALL menu_item
     mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_find_next]  ; "Find _Next"
     lea  rdx, [rel act_find_next]  ; "win.find-next"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_replace]    ; "_Replace..."
-    lea  rdx, [rel act_replace]    ; "win.replace"
+    lea  rsi, [rel lbl_replace]  ; "_Replace..."
+    lea  rdx, [rel act_replace]  ; "win.replace"
     ICALL menu_item
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_goto]       ; "_Go To..."
-    lea  rdx, [rel act_goto]       ; "win.go-to-line"
+    lea  rsi, [rel lbl_goto]  ; "_Go To..."
+    lea  rdx, [rel act_goto]  ; "win.go-to-line"
     ICALL menu_item
     mov  rdi, [rbp-16]
     xor  esi, esi
@@ -281,8 +283,8 @@ build_menubar:
     CCALL g_menu_new
     mov  [rbp-24], rax
     mov  rdi, [rbp-24]
-    lea  rsi, [rel lbl_select_all] ; "Select _All"
-    lea  rdx, [rel act_select_all] ; "win.select-all"
+    lea  rsi, [rel lbl_select_all]  ; "Select _All"
+    lea  rdx, [rel act_select_all]  ; "win.select-all"
     ICALL menu_item
     mov  rdi, [rbp-24]
     lea  rsi, [rel lbl_time_date]  ; "Time/_Date"
@@ -295,9 +297,9 @@ build_menubar:
     mov  rdi, [rbp-24]
     CCALL g_object_unref
 
-    mov  rdi, [rbp-8]               ; parent = menu_bar
-    lea  rsi, [rel sub_edit]        ; label = "_Edit"
-    mov  rdx, [rbp-16]              ; submenu = the Edit menu just built
+    mov  rdi, [rbp-8]         ; parent = menu_bar
+    lea  rsi, [rel sub_edit]  ; label = "_Edit"
+    mov  rdx, [rbp-16]        ; submenu = the Edit menu just built
     CCALL g_menu_append_submenu
     mov  rdi, [rbp-16]
     CCALL g_object_unref            ; same ownership handoff as File, above
@@ -307,12 +309,12 @@ build_menubar:
     mov  [rbp-16], rax
 
     mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_word_wrap]   ; "_Word Wrap" -- checkable (stateful action)
-    lea  rdx, [rel act_word_wrap]   ; "win.word-wrap"
+    lea  rsi, [rel lbl_word_wrap]  ; "_Word Wrap" -- checkable (stateful action)
+    lea  rdx, [rel act_word_wrap]  ; "win.word-wrap"
     ICALL menu_item
     mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_font]        ; "_Font..."
-    lea  rdx, [rel act_font]        ; "win.font"
+    lea  rsi, [rel lbl_font]  ; "_Font..."
+    lea  rdx, [rel act_font]  ; "win.font"
     ICALL menu_item
 
     mov  rdi, [rbp-8]
@@ -339,8 +341,12 @@ build_menubar:
     lea  rdx, [rel act_status_bar]  ; "win.status-bar"
     ICALL menu_item
     mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_dark_mode]   ; "Dark _Mode" (initial text; see format.asm)
-    lea  rdx, [rel act_dark_mode]   ; "win.dark-mode"
+    lea  rsi, [rel lbl_dark_mode]  ; "Dark _Mode" (initial text; see format.asm)
+    lea  rdx, [rel act_dark_mode]  ; "win.dark-mode"
+    ICALL menu_item
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel lbl_line_numbers]  ; "_Line Numbers" -- checkable (stateful action), on by default
+    lea  rdx, [rel act_line_numbers]  ; "win.line-numbers"
     ICALL menu_item
 
     mov  rdi, [rbp-8]
@@ -355,12 +361,12 @@ build_menubar:
     mov  [rbp-16], rax
 
     mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_view_help]   ; "_View Help" -- opens this project's GitHub repo (about.asm)
-    lea  rdx, [rel act_view_help]   ; "win.view-help"
+    lea  rsi, [rel lbl_view_help]  ; "_View Help" -- opens this project's GitHub repo (about.asm)
+    lea  rdx, [rel act_view_help]  ; "win.view-help"
     ICALL menu_item
     mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_about]       ; "_About UnbloatedPad"
-    lea  rdx, [rel act_about]       ; "win.about"
+    lea  rsi, [rel lbl_about]  ; "_About UnbloatedPad"
+    lea  rdx, [rel act_about]  ; "win.about"
     ICALL menu_item
 
     mov  rdi, [rbp-8]
@@ -372,12 +378,12 @@ build_menubar:
 
     ; =================== wrap the finished model in a widget ===================
     mov  rdi, [rbp-8]                          ; the fully-built menu_bar model
-    CCALL gtk_popover_menu_bar_new_from_model   ; GtkWidget *gtk_popover_menu_bar_new_from_model(GMenuModel*) -- this is the actual visible menu-bar widget
-    mov  [rbp-16], rax                          ; stash the widget pointer across the unref below (reusing the scratch slot one last time)
+    CCALL gtk_popover_menu_bar_new_from_model  ; GtkWidget *gtk_popover_menu_bar_new_from_model(GMenuModel*) -- this is the actual visible menu-bar widget
+    mov  [rbp-16], rax                         ; stash the widget pointer across the unref below (reusing the scratch slot one last time)
 
     mov  rdi, [rbp-8]
     CCALL g_object_unref                        ; drop our ref on menu_bar -- the popover widget now holds its own, keeping the whole tree (and g_view_menu) alive
 
-    mov  rax, [rbp-16]                          ; return value = the popover menu bar widget
-    leave                                        ; mov rsp, rbp; pop rbp
+    mov  rax, [rbp-16]  ; return value = the popover menu bar widget
+    leave               ; mov rsp, rbp; pop rbp
     ret
