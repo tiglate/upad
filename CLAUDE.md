@@ -68,7 +68,7 @@ together, unlike the original):
 | `menu.asm` | The File/Edit/Format/View/Help `GMenu` model, wrapped in a `GtkPopoverMenuBar` |
 | `actions.asm` | Registers every `GAction` (`win.*` / `app.*`) and points it at its handler |
 | `fileio.asm` | New/Open/Save/Save As: `GtkFileDialog` for the picker, raw `open`/`read`/`write`/`close` for the bytes |
-| `encoding.asm` | Transcodes non-UTF-8 files (assumed Windows-1252) to UTF-8 on load via `g_convert`; on Save/Save As, asks once (`AdwAlertDialog`) whether to keep writing the original encoding or convert to UTF-8 |
+| `encoding.asm` | Transcodes non-UTF-8 files to UTF-8 on load via `g_convert` -- UTF-16 (LE/BE) detected by its byte-order mark, otherwise assumed Windows-1252; on Save/Save As, asks once (`AdwAlertDialog`) whether to keep writing the original encoding or convert to UTF-8 |
 | `errdlg.asm` | `report_error`/`report_file_error`: a `GtkAlertDialog` for the user, `g_log` (journal/stderr) for later examination — called from `fileio.asm`, `printing.asm`, and `encoding.asm` |
 | `printing.asm` | File > Page Setup.../Print..., via `GtkPageSetup`/`GtkPrintSettings` and `GtkPrintOperation`'s begin-print/draw-page/end-print signals (Pango layout pagination + cairo drawing) |
 | `editops.asm` | Undo/Cut/Copy/Paste/Delete/Select All (GTK's own built-in text widget actions) + Time/Date |
@@ -136,14 +136,16 @@ re-verify with a small C program before trusting these constants.
 
 ## Known limitations (don't "fix" without being asked)
 
-- `encoding.asm` has no real charset auto-detection: on a UTF-8 validation
-  failure it always assumes Windows-1252 (a deliberate simplification, not
-  an oversight — see that file's own header comment for why). A file in
-  some other legacy encoding (Shift-JIS, KOI8-R, ...) will decode as
-  garbage rather than correctly, though it won't crash or silently stay
-  empty. Also, the encoding choice on Save is asked at most once per
-  document per session (remembered after that) — there's no menu item to
-  revisit it later without re-opening the file.
+- `encoding.asm` recognizes UTF-16 (via its byte-order mark) but has no
+  real charset auto-detection beyond that: on a UTF-8 validation failure
+  with no UTF-16 BOM, it always assumes Windows-1252 (a deliberate
+  simplification, not an oversight — see that file's own header comment
+  for why). A file in some other legacy encoding (Shift-JIS, KOI8-R, ...)
+  will decode as garbage rather than correctly, though it won't crash or
+  silently stay empty. Also, the encoding choice on Save is asked at most
+  once per document per session (remembered after that) — there's no menu
+  item to revisit it later without re-opening the file. UTF-32 (also
+  BOM-detectable) isn't handled either.
 - Printing (`printing.asm`) always uses the last Format > Font... pick (or
   "Monospace 11" if none) for the whole document — there's no per-print
   font/size override independent of the on-screen font, and no

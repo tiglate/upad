@@ -209,6 +209,7 @@ extern lseek
 extern readlink
 extern strlen
 extern strcmp
+extern memcpy
 
 ; ---- libc: errno / error-message text (errdlg.asm's error dialog + log) ------
 extern __errno_location

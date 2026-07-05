@@ -6,15 +6,22 @@
 ; GtkTextBuffer requires UTF-8 (gtk_text_buffer_set_text asserts on
 ; anything else, silently doing nothing on a validation failure -- no
 ; crash, no GError, no signal, just an empty buffer -- which used to be
-; this program's entire behavior on a non-UTF-8 file). Real charset
-; auto-detection (distinguishing Windows-1252 from Latin-1, Shift-JIS,
-; KOI8-R, ...) is a much bigger undertaking than this handles: on any
-; UTF-8 validation failure, this always assumes Windows-1252 -- a safe
-; default, since it's a strict superset of Latin-1/ISO-8859-1 for every
-; printable character, and is what the overwhelming majority of "old
-; Windows/DOS text file that isn't UTF-8" turns out to actually be in
-; practice (this is also what web browsers default to for undeclared
-; legacy 8-bit text). See CLAUDE.md's Known limitations.
+; this program's entire behavior on a non-UTF-8 file). Two source
+; encodings are recognized, tracked in g_doc_source_encoding:
+;
+;   - UTF-16 (LE or BE): detected by its 2-byte byte-order mark (FF FE or
+;     FE FF) -- a real, unambiguous signal, unlike guessing an 8-bit
+;     charset. This is exactly what Windows Notepad's own "Unicode" save
+;     option produces, so it's a common thing to actually run into.
+;   - Windows-1252: the fallback assumed whenever the bytes are neither a
+;     recognized UTF-16 BOM nor valid UTF-8. Real charset auto-detection
+;     (distinguishing Windows-1252 from Latin-1, Shift-JIS, KOI8-R, ...)
+;     is a much bigger undertaking than this handles; Windows-1252 is a
+;     safe default since it's a strict superset of Latin-1/ISO-8859-1 for
+;     every printable character, and is what the overwhelming majority of
+;     "old Windows/DOS 8-bit text file" turns out to actually be in
+;     practice (also what web browsers default to for undeclared legacy
+;     8-bit text). See CLAUDE.md's Known limitations.
 ;
 ; The two entry points fileio.asm calls:
 ;   decode_and_load_into_buffer(raw, raw_len) -- on Open/command-line load
@@ -28,10 +35,19 @@
 ; unsaved.asm's finish_save_and_resume_pending) until it's answered. The
 ; answer is remembered for the rest of that document's session, so later
 ; saves don't ask again.
+;
+; A correctness note that shaped every g_convert call below: this file
+; never uses strlen() on a converted result, only g_convert's own
+; bytes_written out-param. UTF-16 text is full of embedded 0x00 bytes --
+; every Basic Latin character's high byte is zero -- so strlen() would
+; silently truncate at the first one. Windows-1252 output could in theory
+; contain a genuine embedded NUL too (rare, but possible), so the same
+; discipline applies there for consistency even though it isn't the
+; common case that would actually hit it.
 
-%include "consts.inc"          ; TRUE/FALSE, ADW_RESPONSE_DESTRUCTIVE (unused here, kept for consistency), G_CONNECT_DEFAULT (unused directly, adw_alert_dialog_choose doesn't need it)
+%include "consts.inc"          ; TRUE/FALSE, DOC_ENCODING_*, ADW_RESPONSE_DESTRUCTIVE (unused here, kept for consistency), G_CONNECT_DEFAULT (unused directly, adw_alert_dialog_choose doesn't need it)
 %include "callconv.inc"        ; CCALL/ICALL macros; see its own comment for g_convert's 7th (stack) argument and the indirect-call pattern used below
-%include "extern.inc"          ; extern g_utf8_validate/g_convert/adw_alert_dialog_*/strlen/strcmp/g_free
+%include "extern.inc"          ; extern g_utf8_validate/g_convert/adw_alert_dialog_*/memcpy/g_free
 
 global reset_encoding_state         ; called from fileio.asm's on_new_activate, and internally by decode_and_load_into_buffer below
 global decode_and_load_into_buffer  ; called from fileio.asm's read_file_to_buffer
@@ -40,14 +56,16 @@ global ensure_encoding_resolved     ; called from fileio.asm (on_save_activate, 
 
 extern g_window                       ; main.asm -- parent for the encoding-choice dialog
 extern g_buffer                        ; main.asm -- decode_and_load_into_buffer's target
-extern report_error                     ; errdlg.asm -- shown if even the Windows-1252 fallback can't decode/encode
+extern report_error                     ; errdlg.asm -- shown if even the fallback encodings can't decode/encode
 
 section .rodata
     charset_utf8         db "UTF-8", 0
     charset_windows1252  db "WINDOWS-1252", 0
+    charset_utf16le      db "UTF-16LE", 0    ; the explicit (not bare "UTF-16") codeset names -- neither strips/adds a BOM itself, which is exactly why we handle the BOM ourselves on both ends
+    charset_utf16be      db "UTF-16BE", 0
 
     heading_str  db "Save in original encoding?", 0
-    body_str     db "This file was opened from a non-UTF-8 encoding (Windows-1252) and converted for editing. Choose whether to save it back in that original encoding, or convert the document to UTF-8.", 0
+    body_str     db "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8.", 0
 
     ; AdwAlertDialog response IDs (matched via strcmp in on_encoding_response
     ; below) paired with their button labels -- same shape as unsaved.asm's
@@ -60,14 +78,14 @@ section .rodata
     lbl_utf8     db "_Convert to UTF-8", 0
 
     err_msg_decode    db "Could not open file", 0
-    err_detail_decode db "This file's contents don't look like valid UTF-8 or Windows-1252 text.", 0
+    err_detail_decode db "This file's contents don't look like valid UTF-8, UTF-16, or Windows-1252 text.", 0
     err_msg_encode    db "Could not save file", 0
-    err_detail_encode db "This document contains characters that don't exist in the Windows-1252 encoding it was opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead.", 0
+    err_detail_encode db "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead.", 0
 
 section .bss
     align 8
     g_doc_needs_encoding_choice resq 1  ; TRUE if this document was transcoded from a non-UTF-8 encoding on load and Save/Save As haven't asked (and gotten an answer) about it yet this session
-    g_doc_keep_native_encoding  resq 1  ; once resolved (or for a document that was always plain UTF-8, permanently FALSE): TRUE = write back out as Windows-1252 on save, FALSE = write UTF-8
+    g_doc_source_encoding       resq 1  ; a DOC_ENCODING_* constant: what to transcode back to on save if the user chooses "keep" (DOC_ENCODING_UTF8 for a document that was always plain UTF-8 -- meaning "just write UTF-8", the same as choosing "convert" ever does)
     g_encoding_continue_fn      resq 1  ; stashed across the async prompt below -- whatever the caller wanted to happen once the encoding is settled
 
 section .text
@@ -79,31 +97,78 @@ reset_encoding_state:
     push rbp
     mov  rbp, rsp
     mov  qword [rel g_doc_needs_encoding_choice], FALSE
-    mov  qword [rel g_doc_keep_native_encoding], FALSE
+    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_UTF8
     pop  rbp
     ret
 
 ; -------------------------------------------------------------------------
 ; void decode_and_load_into_buffer(const char *raw, gsize raw_len)
-; Validates raw as UTF-8; if it already is, loads it into g_buffer as-is
-; (the common case, and the only thing this program did before this
-; file existed). If not, transcodes it from Windows-1252 (see file header
-; for why that specific fallback) and marks g_doc_needs_encoding_choice so
-; a later Save/Save As asks what to do about it. If even that fallback
-; can't make sense of the bytes (only happens for genuinely non-text/
-; binary data), reports an error the same way a failed open()/read()
-; would and leaves the buffer untouched.
+; Checks for a UTF-16 byte-order mark first (an unambiguous signal, unlike
+; guessing an 8-bit charset); failing that, validates raw as UTF-8 and
+; loads it as-is if it already is (the common case); failing THAT,
+; assumes Windows-1252 (see file header for why that specific fallback).
+; Whichever non-UTF-8 path is taken, marks g_doc_needs_encoding_choice so
+; a later Save/Save As asks what to do about it. If even the relevant
+; fallback can't make sense of the bytes, reports an error the same way a
+; failed open()/read() would and leaves the buffer untouched.
 ; -------------------------------------------------------------------------
 decode_and_load_into_buffer:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 48                  ; [rbp-8]=raw  [rbp-16]=raw_len  [rbp-24]=converted UTF-8 text (only used on the non-UTF-8 path -- owned, must g_free)  [rbp-32]=its length
+    sub  rsp, 64
+    ; [rbp-8]=raw  [rbp-16]=raw_len  [rbp-24]=converted UTF-8 text (owned once set, must g_free)  [rbp-32]=its exact length (from bytes_written, NOT strlen -- see file header)  [rbp-40]=the from_codeset chosen by the BOM check below, only used on that path  [rbp-48]=bytes_written out-param scratch for g_convert
 
     mov  [rbp-8], rdi
     mov  [rbp-16], rsi
 
     ICALL reset_encoding_state       ; every freshly-loaded document starts assuming plain UTF-8; corrected below if it isn't
 
+    ; --- check for a UTF-16 byte-order mark first -- far more reliable than any heuristic ---
+    mov  rax, [rbp-16]
+    cmp  rax, 2
+    jl   .no_bom                     ; too short to hold a 2-byte BOM
+
+    mov  rdi, [rbp-8]
+    movzx eax, byte [rdi]
+    movzx ecx, byte [rdi+1]
+    cmp  al, 0xFF
+    jne  .check_utf16be
+    cmp  cl, 0xFE
+    jne  .no_bom
+    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_UTF16LE
+    lea  rax, [rel charset_utf16le]
+    mov  [rbp-40], rax
+    jmp  .decode_utf16
+.check_utf16be:
+    cmp  al, 0xFE
+    jne  .no_bom
+    cmp  cl, 0xFF
+    jne  .no_bom
+    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_UTF16BE
+    lea  rax, [rel charset_utf16be]
+    mov  [rbp-40], rax
+    ; falls through to .decode_utf16
+
+.decode_utf16:
+    ; iconv's explicit UTF-16LE/UTF-16BE codecs don't strip a leading BOM
+    ; themselves (verified empirically: they decode it as an ordinary
+    ; U+FEFF character), so skip the 2 BOM bytes ourselves first
+    sub  rsp, 16                        ; g_convert's 7th (stack) argument + padding, see callconv.inc
+    mov  qword [rsp], 0                   ; arg7 = error = NULL, not inspected (matches this codebase's convention elsewhere)
+    mov  rdi, [rbp-8]
+    add  rdi, 2                             ; arg1 = str = raw + 2 (past the BOM)
+    mov  rsi, [rbp-16]
+    sub  rsi, 2                              ; arg2 = len = raw_len - 2
+    lea  rdx, [rel charset_utf8]               ; arg3 = to_codeset
+    mov  rcx, [rbp-40]                            ; arg4 = from_codeset (UTF-16LE or UTF-16BE, chosen above)
+    xor  r8, r8                                     ; arg5 = bytes_read = NULL (unused)
+    lea  r9, [rbp-48]                                 ; arg6 = &bytes_written
+    CCALL g_convert                                     ; gchar *g_convert(const gchar*, gssize, const gchar*, const gchar*, gsize*, gsize*, GError**) -- rax = new UTF-8 string, ours to free; or NULL on failure
+    add  rsp, 16
+    jmp  .have_conversion_result
+
+.no_bom:
+    ; --- no recognized BOM -- try plain UTF-8 first --------------------------
     mov  rdi, [rbp-8]                  ; arg1 = str
     mov  rsi, [rbp-16]                   ; arg2 = max_len
     xor  edx, edx                          ; arg3 = end = NULL (not needed)
@@ -111,25 +176,26 @@ decode_and_load_into_buffer:
     test eax, eax
     jnz  .already_utf8
 
-    ; --- not valid UTF-8 -- try Windows-1252 --------------------------------
-    sub  rsp, 16                        ; g_convert's 7th (stack) argument + padding, see callconv.inc
-    mov  qword [rsp], 0                   ; arg7 = error = NULL, not inspected (matches this codebase's convention elsewhere)
+    ; --- not valid UTF-8 either -- try Windows-1252 --------------------------
+    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_WINDOWS_1252
+    sub  rsp, 16
+    mov  qword [rsp], 0                   ; arg7 = error = NULL
     mov  rdi, [rbp-8]                       ; arg1 = str
     mov  rsi, [rbp-16]                        ; arg2 = len
     lea  rdx, [rel charset_utf8]                ; arg3 = to_codeset = "UTF-8"
     lea  rcx, [rel charset_windows1252]           ; arg4 = from_codeset = "WINDOWS-1252"
-    xor  r8, r8                                     ; arg5 = bytes_read = NULL (optional out-param, unused)
-    xor  r9, r9                                       ; arg6 = bytes_written = NULL (optional out-param -- strlen() the NUL-terminated result instead)
-    CCALL g_convert                                     ; gchar *g_convert(const gchar*, gssize, const gchar*, const gchar*, gsize*, gsize*, GError**) -- rax = new UTF-8 string, NUL-terminated, ours to free; or NULL on failure
+    xor  r8, r8                                     ; arg5 = bytes_read = NULL
+    lea  r9, [rbp-48]                                 ; arg6 = &bytes_written
+    CCALL g_convert
     add  rsp, 16
+    ; falls through to .have_conversion_result
 
+.have_conversion_result:
     test rax, rax
     jz   .decode_failed
     mov  [rbp-24], rax
-
-    mov  rdi, rax                    ; the converted string
-    CCALL strlen                        ; size_t strlen(const char*)
-    mov  [rbp-32], rax
+    mov  rax, [rbp-48]
+    mov  [rbp-32], rax                   ; the exact converted length, from bytes_written above
 
     mov  qword [rel g_doc_needs_encoding_choice], TRUE   ; ask, later, whether to keep this encoding or convert on save
 
@@ -159,36 +225,44 @@ decode_and_load_into_buffer:
 
 ; -------------------------------------------------------------------------
 ; gboolean encode_for_save(char *utf8_text, gsize utf8_len, char **out_text, gsize *out_len)
-; Takes ownership of utf8_text (may free it). If g_doc_keep_native_encoding
-; is FALSE (the common case: no ambiguity, or the user already chose to
-; convert), *out_text/*out_len are just utf8_text/utf8_len unchanged -- the
-; caller still owns exactly one buffer to free when done, same as always.
+; Takes ownership of utf8_text (may free it). Converts back to whatever
+; g_doc_source_encoding says the document's original encoding was:
+; DOC_ENCODING_UTF8 (the common case: no ambiguity, or the user already
+; chose to convert) just passes utf8_text/utf8_len straight through
+; unchanged. DOC_ENCODING_WINDOWS_1252/UTF16LE/UTF16BE convert instead
+; (the UTF-16 cases via convert_utf8_to_utf16_with_bom below, which also
+; restores the 2-byte BOM so the file round-trips byte-for-byte).
 ;
-; If TRUE, converts utf8_text to Windows-1252 instead: on success,
-; utf8_text is freed HERE and *out_text/*out_len point at a NEW buffer the
-; caller now owns instead. On failure (some character in the document has
-; no Windows-1252 representation -- e.g. an emoji or CJK character typed
-; into a document that started out as a legacy Western-European file),
-; utf8_text is ALSO freed here, an error is reported, and this returns
-; FALSE -- the caller should skip writing anything: there's nothing left
-; to write, and writing partial/wrong bytes would be worse than not
-; writing at all.
+; On success, *out_text/*out_len point at a buffer the CALLER now owns
+; (must g_free exactly once) -- either utf8_text itself unchanged (the
+; UTF-8 case) or a new buffer (any other case, with utf8_text already
+; freed). Returns FALSE (utf8_text already freed, an error already
+; reported) if a conversion was needed but failed -- e.g. a character
+; with no Windows-1252 representation, such as an emoji or CJK character
+; typed into a document that started out as a legacy Western-European
+; file. The caller should skip writing anything: there's nothing left to
+; write, and writing partial/wrong bytes would be worse than not writing
+; at all.
 ; -------------------------------------------------------------------------
 encode_for_save:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 48                  ; [rbp-8]=utf8_text  [rbp-16]=utf8_len  [rbp-24]=out_text (the caller's out-param address)  [rbp-32]=out_len (ditto)  [rbp-40]=the g_convert result, only used on the conversion path
+    sub  rsp, 64                  ; [rbp-8]=utf8_text  [rbp-16]=utf8_len  [rbp-24]=out_text (the caller's out-param address)  [rbp-32]=out_len (ditto)  [rbp-40]=the g_convert result  [rbp-48]=bytes_written out-param scratch -- both only used on the Windows-1252 path
 
     mov  [rbp-8], rdi
     mov  [rbp-16], rsi
     mov  [rbp-24], rdx
     mov  [rbp-32], rcx
 
-    mov  rax, [rel g_doc_keep_native_encoding]
-    test rax, rax
-    jnz  .convert
+    mov  rax, [rel g_doc_source_encoding]
+    cmp  rax, DOC_ENCODING_WINDOWS_1252
+    je   .convert_windows1252
+    cmp  rax, DOC_ENCODING_UTF16LE
+    je   .convert_utf16le
+    cmp  rax, DOC_ENCODING_UTF16BE
+    je   .convert_utf16be
 
-    ; --- common case: no native-encoding conversion needed, pass straight through ---
+    ; --- DOC_ENCODING_UTF8 (the common case): no conversion needed, pass straight through ---
     mov  rax, [rbp-24]                ; *out_text = utf8_text (unchanged)
     mov  rdx, [rbp-8]
     mov  [rax], rdx
@@ -199,7 +273,7 @@ encode_for_save:
     leave
     ret
 
-.convert:
+.convert_windows1252:
     sub  rsp, 16                        ; g_convert's 7th (stack) argument + padding
     mov  qword [rsp], 0                   ; arg7 = error = NULL
     mov  rdi, [rbp-8]                       ; arg1 = str = utf8_text
@@ -207,7 +281,7 @@ encode_for_save:
     lea  rdx, [rel charset_windows1252]         ; arg3 = to_codeset
     lea  rcx, [rel charset_utf8]                  ; arg4 = from_codeset
     xor  r8, r8                                     ; arg5 = bytes_read = NULL
-    xor  r9, r9                                       ; arg6 = bytes_written = NULL
+    lea  r9, [rbp-48]                                 ; arg6 = &bytes_written -- see file header for why not strlen()
     CCALL g_convert
     add  rsp, 16
     mov  [rbp-40], rax                  ; stash the (possibly NULL) converted pointer
@@ -219,12 +293,128 @@ encode_for_save:
     test rax, rax
     jz   .convert_failed
 
-    mov  rdi, rax
-    CCALL strlen
-    mov  rdx, [rbp-32]              ; *out_len = strlen(new text)
+    mov  rdx, [rbp-24]                ; *out_text = the new text (no BOM for Windows-1252)
     mov  [rdx], rax
-    mov  rdx, [rbp-24]                ; *out_text = the new text
+    mov  rdx, [rbp-32]                  ; *out_len = the exact converted length, from bytes_written above
+    mov  rax, [rbp-48]
+    mov  [rdx], rax
+    mov  eax, TRUE
+    leave
+    ret
+
+.convert_utf16le:
+    xor  r8d, r8d                        ; arg5 = is_big_endian = FALSE
+    jmp  .convert_utf16_dispatch
+.convert_utf16be:
+    mov  r8d, TRUE                        ; arg5 = is_big_endian = TRUE
+.convert_utf16_dispatch:
+    mov  rdi, [rbp-8]                       ; arg1 = utf8_text
+    mov  rsi, [rbp-16]                        ; arg2 = utf8_len
+    mov  rdx, [rbp-24]                          ; arg3 = out_text
+    mov  rcx, [rbp-32]                            ; arg4 = out_len
+    ; arg5 (is_big_endian) already set by whichever branch above
+    ICALL convert_utf8_to_utf16_with_bom            ; below -- propagates its own TRUE/FALSE return straight through as ours
+    leave
+    ret
+
+.convert_failed:
+    lea  rdi, [rel err_msg_encode]
+    lea  rsi, [rel err_detail_encode]
+    ICALL report_error                  ; errdlg.asm
+    xor  eax, eax
+    leave
+    ret
+
+; -------------------------------------------------------------------------
+; gboolean convert_utf8_to_utf16_with_bom(char *utf8_text, gsize utf8_len, char **out_text, gsize *out_len, int is_big_endian)
+; Shared helper behind encode_for_save's UTF-16LE/UTF-16BE branches.
+; Converts utf8_text to raw UTF-16 (the requested endianness, via
+; g_convert with the explicit *LE/*BE codeset name, which never adds a
+; BOM of its own), then g_malloc's a new buffer 2 bytes larger and writes
+; the matching 2-byte BOM in front of the converted data, so the file
+; this becomes round-trips with the same BOM the original had. Same
+; ownership contract as encode_for_save itself.
+; -------------------------------------------------------------------------
+convert_utf8_to_utf16_with_bom:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 80
+    ; [rbp-8]=utf8_text  [rbp-16]=utf8_len  [rbp-24]=out_text  [rbp-32]=out_len  [rbp-40]=is_big_endian
+    ; [rbp-48]=to_codeset (chosen below)  [rbp-56]=g_convert's result (raw UTF-16, no BOM, owned)
+    ; [rbp-64]=its exact byte length (from bytes_written)  [rbp-72]=the final BOM+data buffer (owned)
+
+    mov  [rbp-8], rdi
+    mov  [rbp-16], rsi
+    mov  [rbp-24], rdx
+    mov  [rbp-32], rcx
+    mov  [rbp-40], r8
+
     mov  rax, [rbp-40]
+    test rax, rax
+    jz   .use_le
+    lea  rax, [rel charset_utf16be]
+    mov  [rbp-48], rax
+    jmp  .have_codeset
+.use_le:
+    lea  rax, [rel charset_utf16le]
+    mov  [rbp-48], rax
+.have_codeset:
+
+    sub  rsp, 16                        ; g_convert's 7th (stack) argument + padding
+    mov  qword [rsp], 0                   ; arg7 = error = NULL
+    mov  rdi, [rbp-8]                       ; arg1 = str = utf8_text
+    mov  rsi, [rbp-16]                        ; arg2 = len = utf8_len
+    mov  rdx, [rbp-48]                          ; arg3 = to_codeset (UTF-16LE or UTF-16BE)
+    lea  rcx, [rel charset_utf8]                  ; arg4 = from_codeset
+    xor  r8, r8                                     ; arg5 = bytes_read = NULL
+    lea  r9, [rbp-64]                                 ; arg6 = &bytes_written -- MUST use this, not strlen: UTF-16 output for ordinary Latin text is full of embedded 0x00 bytes, which strlen would stop at (see file header)
+    CCALL g_convert
+    add  rsp, 16
+    mov  [rbp-56], rax                  ; stash the (possibly NULL) result
+
+    mov  rdi, [rbp-8]                     ; the ORIGINAL utf8_text -- done with it either way, free it now
+    CCALL g_free
+
+    mov  rax, [rbp-56]
+    test rax, rax
+    jz   .convert_failed
+
+    ; --- g_malloc a buffer 2 bytes bigger, for the BOM we're about to add ---
+    mov  rax, [rbp-64]                 ; the exact converted length
+    add  rax, 2
+    mov  rdi, rax
+    CCALL g_malloc                        ; gpointer g_malloc(gsize) -- aborts on OOM, no failure check needed (same reasoning as elsewhere in this codebase)
+    mov  [rbp-72], rax
+
+    ; --- write the 2-byte BOM, matching whichever endianness we converted to ---
+    mov  rdi, [rbp-72]
+    mov  rax, [rbp-40]                    ; is_big_endian
+    test rax, rax
+    jz   .write_le_bom
+    mov  byte [rdi], 0xFE                    ; UTF-16BE BOM: FE FF
+    mov  byte [rdi+1], 0xFF
+    jmp  .bom_written
+.write_le_bom:
+    mov  byte [rdi], 0xFF                    ; UTF-16LE BOM: FF FE
+    mov  byte [rdi+1], 0xFE
+.bom_written:
+
+    ; --- copy the converted UTF-16 bytes right after the BOM ---
+    mov  rdi, [rbp-72]
+    add  rdi, 2                              ; arg1 = dest = combined buffer, past the BOM
+    mov  rsi, [rbp-56]                         ; arg2 = src = the converted UTF-16 bytes
+    mov  rdx, [rbp-64]                           ; arg3 = n = their exact length
+    CCALL memcpy                                    ; void *memcpy(void *dest, const void *src, size_t n)
+
+    mov  rdi, [rbp-56]                    ; done with the (BOM-less) converted buffer now that it's been copied
+    CCALL g_free
+
+    mov  rdx, [rbp-24]                    ; *out_text = the combined (BOM + data) buffer
+    mov  rax, [rbp-72]
+    mov  [rdx], rax
+    mov  rdx, [rbp-32]                       ; *out_len = converted length + 2 (the BOM)
+    mov  rax, [rbp-64]
+    add  rax, 2
     mov  [rdx], rax
     mov  eax, TRUE
     leave
@@ -322,11 +512,8 @@ on_encoding_response:
     lea  rsi, [rel resp_keep]
     CCALL strcmp
     test eax, eax
-    jnz  .use_utf8
-    mov  qword [rel g_doc_keep_native_encoding], TRUE
-    jmp  .resolved
-.use_utf8:
-    mov  qword [rel g_doc_keep_native_encoding], FALSE
+    jz   .resolved                 ; "keep" -- leave g_doc_source_encoding exactly as decode_and_load_into_buffer set it
+    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_UTF8   ; the only other non-cancel response is "utf8" -- convert going forward
 .resolved:
     mov  qword [rel g_doc_needs_encoding_choice], FALSE   ; resolved -- don't ask again this session
     mov  r10, [rel g_encoding_continue_fn]                  ; loaded into r10, not rax/rcx -- the register about to be zeroed (matching ICALL's own convention, see ensure_encoding_resolved's own indirect call) must not be the one holding the call target

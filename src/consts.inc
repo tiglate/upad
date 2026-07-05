@@ -143,3 +143,10 @@ GTK_TEXT_WINDOW_LEFT  equ 3
 ;      status as FONT_CSS_BUF_SIZE/STATUS_BUF_SIZE above) ----------------
 LINE_NUMBER_RIGHT_PAD       equ 8   ; gap between the rightmost digit and the text view's own content
 LINE_NUMBER_GUTTER_PADDING  equ 16  ; total horizontal padding (both sides) added to the measured digit-sample width when sizing the gutter
+
+; ---- encoding.asm: which charset a document was decoded from (our own
+;      internal enum, not header-sourced -- same status as PENDING_* above) --
+DOC_ENCODING_UTF8          equ 0
+DOC_ENCODING_WINDOWS_1252  equ 1
+DOC_ENCODING_UTF16LE       equ 2
+DOC_ENCODING_UTF16BE       equ 3
