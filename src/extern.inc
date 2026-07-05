@@ -17,6 +17,10 @@ extern g_malloc
 extern g_free
 extern g_path_get_basename
 
+; ---- GLib: charset validation/conversion (encoding.asm) ------------------
+extern g_utf8_validate
+extern g_convert
+
 ; ---- GApplication / GAction ----------------------------------------------
 extern g_application_run
 extern g_application_quit

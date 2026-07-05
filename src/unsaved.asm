@@ -38,7 +38,8 @@ extern g_current_path               ; fileio.asm -- read here to decide "Save" v
 extern on_new_activate               ; fileio.asm -- the REAL New implementation, called once request_close has decided it's safe
 extern on_open_activate              ; fileio.asm -- the REAL Open implementation
 extern on_save_as_activate           ; fileio.asm -- fallback when "Save" is chosen but there's no current path yet
-extern write_buffer_to_file          ; fileio.asm -- used directly when "Save" is chosen and there IS a current path (no need for a picker)
+extern finish_save_current_path      ; fileio.asm -- writes g_current_path + clears the unsaved-changes flag, once the encoding (if ambiguous) is settled
+extern ensure_encoding_resolved       ; encoding.asm -- gates finish_save_current_path behind a Convert/Keep-original prompt if needed
 extern on_quit_activate               ; actions.asm -- the REAL Quit implementation (unconditional g_application_quit)
 
 section .rodata
@@ -119,6 +120,20 @@ perform_pending:
     leave
     ret
 
+; void finish_save_and_resume_pending(void) -- the continuation passed to
+; encoding.asm's ensure_encoding_resolved from on_unsaved_response's
+; .save case below: finishes the actual save (fileio.asm's own shared
+; helper, which also clears the unsaved-changes flag), then resumes
+; whatever New/Open/Quit was waiting on this Save completing.
+finish_save_and_resume_pending:
+    push rbp
+    mov  rbp, rsp
+    ICALL finish_save_current_path        ; fileio.asm
+    mov  rdi, [rel g_pending_action]
+    ICALL perform_pending
+    pop  rbp
+    ret
+
 ; void on_unsaved_response(GObject *dialog, GAsyncResult *res, gpointer user_data)
 ; The GAsyncReadyCallback for adw_alert_dialog_choose (see request_close
 ; below) -- fires once the user picks Cancel, Discard, or Save (or
@@ -163,11 +178,8 @@ on_unsaved_response:
     mov  rax, [rel g_current_path]      ; is there already a file to save to?
     test rax, rax
     jz   .save_as                          ; no -- fall through to the Save As path below
-    mov  rdi, rax                            ; arg = the current path
-    ICALL write_buffer_to_file                 ; write synchronously, no picker needed
-    ICALL clear_dirty                            ; the save succeeded (write_buffer_to_file doesn't report failure, so this is optimistic -- matches its own documented silent-failure behavior, see fileio.asm)
-    mov  rdi, [rel g_pending_action]              ; now safe to proceed with the originally-requested New/Open/Quit
-    ICALL perform_pending
+    lea  rdi, [rel finish_save_and_resume_pending]   ; our own continuation, below -- runs once the encoding (if ambiguous) is settled
+    ICALL ensure_encoding_resolved              ; encoding.asm
     jmp  .done
 .save_as:
     ICALL on_save_as_activate     ; async Save As -- see file header note: the pending New/Open/Quit is

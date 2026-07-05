@@ -2,9 +2,10 @@
 ; single open()/lseek()/read()/close() or open()/write()/close() sequence
 ; via the raw POSIX calls (same shape as the original's CreateFileA/
 ; ReadFile/WriteFile path); GtkFileDialog (GTK 4.10+, async) only supplies
-; the picked path. Text is UTF-8 both in the file and in GtkTextBuffer, so
-; -- unlike the Win32/UTF-16 original -- no charset conversion is needed
-; anywhere in this file.
+; the picked path. GtkTextBuffer requires UTF-8, but files in the wild
+; often aren't -- encoding.asm handles transcoding on both ends (see
+; read_file_to_buffer/write_buffer_to_file below), so this file itself
+; never has to think about charsets directly.
 ;
 ; GtkFileDialog's open()/save() calls are asynchronous: they show the
 ; picker and return immediately, then invoke a GAsyncReadyCallback once
@@ -12,7 +13,11 @@
 ; four "activate" entry points here instead of two: on_open_activate and
 ; on_save_as_activate just show the dialog and return; the real work
 ; (reading/writing bytes) happens later, in on_open_finished and
-; on_save_finished, once GLib calls back into us.
+; on_save_finished, once GLib calls back into us. Save itself can ALSO
+; turn async on demand now: if the document's encoding hasn't been
+; resolved yet (encoding.asm), the actual write waits behind a Convert/
+; Keep-original/Cancel prompt -- see finish_save_current_path and
+; ensure_encoding_resolved.
 
 %include "consts.inc"          ; O_RDONLY/O_WRONLY/O_CREAT/O_TRUNC, SEEK_SET/SEEK_END, FILE_CREATE_MODE, FALSE, TITLE_BUF_SIZE
 %include "callconv.inc"        ; CCALL/ICALL macros
@@ -26,12 +31,17 @@ global update_window_title      ; reused by window.asm (initial title) and unsav
 global strcopy_bounded          ; tiny bounded string-copy helper, reused by finddlg.asm/format.asm/statusbar.asm for their own string building
 global write_buffer_to_file     ; reused by unsaved.asm's "Save" response and window.asm's on_open_signal is NOT this one (that reads) -- see read_file_to_buffer below
 global read_file_to_buffer      ; reused by window.asm's on_open_signal (command-line file open)
+global finish_save_current_path ; the continuation on_save_activate/on_save_finished (below) and unsaved.asm's Save response all pass to encoding.asm's ensure_encoding_resolved
 global g_current_path           ; reused (read/written) by unsaved.asm and window.asm
 
 extern g_window                  ; main.asm -- parent for the file-picker dialogs, target of gtk_window_set_title
 extern g_buffer                  ; main.asm -- the text buffer New/Open/Save all operate on
 extern clear_dirty                ; unsaved.asm -- called after every successful New/Open/Save so the unsaved-changes prompt won't fire needlessly
 extern report_file_error           ; errdlg.asm -- shows an error dialog and logs, called at every open()/lseek()/read()/write() failure below
+extern reset_encoding_state          ; encoding.asm -- called on New, and internally by decode_and_load_into_buffer on every Open
+extern decode_and_load_into_buffer    ; encoding.asm -- UTF-8 validation/transcoding, called from read_file_to_buffer below
+extern encode_for_save                 ; encoding.asm -- the reverse conversion (if needed), called from write_buffer_to_file below
+extern ensure_encoding_resolved          ; encoding.asm -- gates the actual save behind a Convert/Keep-original prompt if the document's encoding hasn't been settled yet
 
 section .rodata
     open_dlg_title  db "Open File", 0
@@ -223,16 +233,15 @@ read_file_to_buffer:
     CCALL read                           ; ssize_t read(int fd, void *buf, size_t count) -- returns bytes actually read, or -1 on error
     cmp  rax, 0
     jl   .read_failed_free_and_close                  ; read failed -- skip loading anything into the buffer, free/close what we allocated/opened, and report it
-    mov  rdx, rax                          ; rdx = actual bytes read -> becomes the text length passed to GTK below (may be less than the file's size if the read was short, per the note above; 0 is valid too, for an empty file)
+    mov  rdx, rax                          ; rdx = actual bytes read (may be less than the file's size if the read was short, per the note above; 0 is valid too, for an empty file)
 
-    ; --- hand the bytes straight to the text buffer ------------------------
-    mov  rdi, [rel g_buffer]            ; arg1 = buffer
-    mov  rsi, [rbp-24]                   ; arg2 = the bytes we just read
-    ; rdx (the length) is already set from the read() result above
-    CCALL gtk_text_buffer_set_text        ; void gtk_text_buffer_set_text(GtkTextBuffer*, const char *text, int len) -- replaces the whole buffer's contents
+    ; --- decode (transcoding from a legacy encoding if it's not valid UTF-8) and load into the text buffer ---
+    mov  rdi, [rbp-24]                   ; arg1 = the bytes we just read
+    mov  rsi, rdx                          ; arg2 = length
+    ICALL decode_and_load_into_buffer         ; encoding.asm -- validates UTF-8 (transcoding from Windows-1252 if needed) and sets the text buffer's contents itself; reports its own error (leaving the buffer untouched) if even that fallback fails
 
-    mov  rdi, [rbp-24]                   ; the temporary read buffer
-    CCALL g_free                           ; always free it -- GTK copies the bytes it needs, so we don't hand off ownership
+    mov  rdi, [rbp-24]                   ; the temporary read buffer -- always ours to free regardless of what decode_and_load_into_buffer did with ITS OWN (separate) buffer, since it never takes ownership of this one, only reads from it
+    CCALL g_free                           ; GTK/g_convert both copy the bytes they need, so we don't hand off ownership
     mov  edi, [rbp-8]                     ; fd
     CCALL close                             ; int close(int fd) -- return value ignored, nothing useful to do if it fails
     jmp  .done
@@ -322,6 +331,15 @@ write_buffer_to_file:
     CCALL strlen                               ; size_t strlen(const char*) -- GTK's get_text doesn't hand back a length alongside the string, so this is the only way to get one
     mov  [rbp-32], rax
 
+    ; --- transcode back to the document's original encoding, if the user chose to keep it (encoding.asm) ---
+    mov  rdi, [rbp-24]                 ; arg1 = utf8_text -- encode_for_save takes ownership of this (see its own header comment)
+    mov  rsi, [rbp-32]                   ; arg2 = utf8_len
+    lea  rdx, [rbp-24]                     ; arg3 = &out_text -- written back into this SAME slot
+    lea  rcx, [rbp-32]                       ; arg4 = &out_len -- ditto
+    ICALL encode_for_save
+    test eax, eax
+    jz   .done                                 ; conversion failed -- encode_for_save already freed everything and reported the error; nothing left to write
+
     ; --- open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644) -------------------------
     mov  rdi, [rbp-8]                         ; arg1 = path
     mov  esi, O_WRONLY | O_CREAT | O_TRUNC      ; arg2 = flags -- create it if it doesn't exist, truncate it if it does (we're always writing the WHOLE current buffer, never appending)
@@ -409,6 +427,7 @@ on_new_activate:
 
     ICALL update_window_title                ; retitle to "Untitled - UnbloatedPad"
     ICALL clear_dirty                          ; a freshly-cleared buffer has no unsaved changes
+    ICALL reset_encoding_state                   ; a fresh blank document is unambiguous UTF-8 -- no encoding question pending (encoding.asm)
     pop  rbp
     ret
 
@@ -484,6 +503,22 @@ on_open_finished:
     leave
     ret
 
+; void finish_save_current_path(void)
+; Writes g_current_path and clears the unsaved-changes flag -- the shared
+; continuation passed to encoding.asm's ensure_encoding_resolved by both
+; on_save_activate's fast path and on_save_finished below (by the time
+; either runs this, g_current_path already holds the right value in both
+; cases), and reused (via its own small wrapper) by unsaved.asm's Save
+; response too.
+finish_save_current_path:
+    push rbp
+    mov  rbp, rsp
+    mov  rdi, [rel g_current_path]
+    ICALL write_buffer_to_file
+    ICALL clear_dirty                       ; a successful save clears the unsaved-changes flag (write_buffer_to_file doesn't report failure back to us, so this is optimistic -- same documented behavior as everywhere else this pattern already appears)
+    pop  rbp
+    ret
+
 ; void on_save_activate(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 ; File > Save: writes directly to the current file if there is one;
 ; otherwise behaves exactly like Save As (there's nowhere to "just save" to yet).
@@ -491,15 +526,13 @@ on_save_activate:
     push rbp
     mov  rbp, rsp
     ; no locals needed -- either branch below either delegates entirely
-    ; (jumping to on_save_as_activate) or does its work with a value
-    ; already sitting in a register
+    ; (jumping to on_save_as_activate) or hands off to ensure_encoding_resolved
 
     mov  rax, [rel g_current_path]     ; is there a current file?
     test rax, rax
     jz   .no_path                       ; no -- fall through to Save As below
-    mov  rdi, rax                        ; arg = the current path
-    ICALL write_buffer_to_file             ; write the whole buffer straight to it, synchronously (no dialog needed)
-    ICALL clear_dirty                       ; a successful save clears the unsaved-changes flag
+    lea  rdi, [rel finish_save_current_path]   ; encoding.asm's ensure_encoding_resolved calls this directly (synchronously) if the encoding is already settled, or once the user answers a Convert/Keep-original prompt otherwise
+    ICALL ensure_encoding_resolved
     jmp  .done
 .no_path:
     ICALL on_save_as_activate      ; rdi/rsi/rdx still hold the original (action, parameter, user_data) args this function was called with -- harmless to forward them, since on_save_as_activate doesn't read them anyway; this is effectively "Save with no current file behaves exactly like Save As"
@@ -552,13 +585,11 @@ on_save_finished:
     CCALL g_file_get_path            ; rax = the chosen path, owned by us
     mov  [rbp-16], rax
 
-    mov  rdi, [rbp-16]                ; arg = path
-    ICALL write_buffer_to_file           ; write the whole buffer to the newly-chosen path
-
     ; take ownership of the path as the document's new current file,
     ; freeing whatever the old one was (if this "Save As" is replacing an
     ; already-saved document's path rather than giving "Untitled" one for
-    ; the first time)
+    ; the first time) -- none of this depends on whether the actual write
+    ; below happens synchronously or after an encoding prompt
     mov  rdi, [rel g_current_path]
     test rdi, rdi
     jz   .no_free_old
@@ -568,10 +599,12 @@ on_save_finished:
     mov  [rel g_current_path], rax
 
     ICALL update_window_title           ; retitle to the new filename
-    ICALL clear_dirty                     ; a successful save clears the unsaved-changes flag
 
-    mov  rdi, [rbp-8]                       ; the GFile object itself
-    CCALL g_object_unref                      ; we only needed its path
+    mov  rdi, [rbp-8]                       ; the GFile object itself -- we only needed its path, already extracted; safe to drop our reference now regardless of when the write itself happens
+    CCALL g_object_unref
+
+    lea  rdi, [rel finish_save_current_path]   ; writes g_current_path (now the new one) and clears the unsaved-changes flag, once the encoding (if ambiguous) is settled
+    ICALL ensure_encoding_resolved
 .done:
     leave
     ret

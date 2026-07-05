@@ -43,6 +43,24 @@
     call %1
 %endmacro
 
+; A 7th (or later) integer/pointer argument doesn't fit in rdi/rsi/rdx/
+; rcx/r8/r9 and has to go on the stack instead -- encoding.asm's calls to
+; g_convert (7 params) are the first case of this in the codebase. Pattern:
+;     sub  rsp, 16              ; one stack slot (8 bytes) + 8 bytes padding,
+;                                ; keeping rsp a multiple of 16 at the CCALL
+;                                ; below, same invariant as everywhere else
+;     mov  qword [rsp], value     ; arg7 goes at [rsp] -- the ABI expects it
+;                                  ; directly below the return address CCALL's
+;                                  ; own `call` is about to push
+;     CCALL some_function
+;     add  rsp, 16                ; restore
+; A function pointer held in a register (rather than referenced by name,
+; so neither CCALL nor ICALL -- both take a symbol -- apply) is called the
+; same way ICALL would, just written out: `xor eax, eax` / `call reg`. See
+; encoding.asm's ensure_encoding_resolved for the one place this program
+; does that, to invoke a caller-supplied continuation once an async
+; decision is resolved (or immediately, if there was nothing to decide).
+
 ; Every object file needs this marker section, or the linker assumes the
 ; old (insecure) default of an executable stack and warns/links one in.
 ; %include-ing this once per .asm file emits one such section per object,
