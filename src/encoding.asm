@@ -82,23 +82,24 @@ section .rodata
     charset_utf16le      db "UTF-16LE", 0    ; the explicit (not bare "UTF-16") codeset names -- neither strips/adds a BOM itself, which is exactly why we handle the BOM ourselves on both ends
     charset_utf16be      db "UTF-16BE", 0
 
-    heading_str  db "Save in original encoding?", 0
-    body_str     db "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8.", 0
+    heading_str  db "Save in original encoding?", 0  ; i18n:
+    body_str     db "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8.", 0  ; i18n:
 
     ; AdwAlertDialog response IDs (matched via strcmp in on_encoding_response
     ; below) paired with their button labels -- same shape as unsaved.asm's
-    ; own alert dialog.
+    ; own alert dialog. The response IDs themselves are internal, never
+    ; shown -- only the _lbl_* button labels are user-visible/translatable.
     resp_cancel  db "cancel", 0
-    lbl_cancel   db "_Cancel", 0
+    lbl_cancel   db "_Cancel", 0  ; i18n:
     resp_keep    db "keep", 0
-    lbl_keep     db "_Keep Original Encoding", 0
+    lbl_keep     db "_Keep Original Encoding", 0  ; i18n:
     resp_utf8    db "utf8", 0
-    lbl_utf8     db "_Convert to UTF-8", 0
+    lbl_utf8     db "_Convert to UTF-8", 0  ; i18n:
 
-    err_msg_decode    db "Could not open file", 0
-    err_detail_decode db "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be.", 0
-    err_msg_encode    db "Could not save file", 0
-    err_detail_encode db "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead.", 0
+    err_msg_decode    db "Could not open file", 0  ; i18n:
+    err_detail_decode db "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be.", 0  ; i18n:
+    err_msg_encode    db "Could not save file", 0  ; i18n:
+    err_detail_encode db "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead.", 0  ; i18n:
 
 section .bss
     align 8
@@ -297,8 +298,13 @@ decode_and_load_into_buffer:
     jmp  .done
 
 .decode_failed:
-    lea  rdi, [rel err_msg_decode]
-    lea  rsi, [rel err_detail_decode]
+    lea  rdi, [rel err_msg_decode]  ; arg1 = msgid
+    CCALL gettext
+    mov  [rbp-24], rax                ; stash the translated op_summary -- reusing this slot since the "converted text" it normally holds is never set on this failure path
+    lea  rdi, [rel err_detail_decode]
+    CCALL gettext
+    mov  rsi, rax               ; arg2 = translated detail
+    mov  rdi, [rbp-24]            ; arg1 = translated op_summary
     ICALL report_error                  ; errdlg.asm
 .done:
     leave
@@ -402,8 +408,13 @@ encode_for_save:
     ret
 
 .convert_failed:
-    lea  rdi, [rel err_msg_encode]
-    lea  rsi, [rel err_detail_encode]
+    lea  rdi, [rel err_msg_encode]  ; arg1 = msgid
+    CCALL gettext
+    mov  [rbp-8], rax                 ; stash the translated op_summary -- reusing this slot, utf8_text (its usual contents) has already been freed above on this path
+    lea  rdi, [rel err_detail_encode]
+    CCALL gettext
+    mov  rsi, rax               ; arg2 = translated detail
+    mov  rdi, [rbp-8]              ; arg1 = translated op_summary
     ICALL report_error                  ; errdlg.asm
     xor  eax, eax
     leave
@@ -505,8 +516,13 @@ convert_utf8_to_utf16_with_bom:
     ret
 
 .convert_failed:
-    lea  rdi, [rel err_msg_encode]
-    lea  rsi, [rel err_detail_encode]
+    lea  rdi, [rel err_msg_encode]  ; arg1 = msgid
+    CCALL gettext
+    mov  [rbp-8], rax                 ; stash the translated op_summary -- reusing this slot, utf8_text (its usual contents) has already been freed above on this path
+    lea  rdi, [rel err_detail_encode]
+    CCALL gettext
+    mov  rsi, rax               ; arg2 = translated detail
+    mov  rdi, [rbp-8]              ; arg1 = translated op_summary
     ICALL report_error                  ; errdlg.asm
     xor  eax, eax
     leave
@@ -537,22 +553,33 @@ ensure_encoding_resolved:
 .prompt:
     mov  [rel g_encoding_continue_fn], rdi   ; remember it for on_encoding_response, below
 
-    lea  rdi, [rel heading_str]
-    lea  rsi, [rel body_str]
+    lea  rdi, [rel heading_str]  ; arg1 = msgid
+    CCALL gettext
+    mov  [rbp-8], rax             ; stash the translated heading across the next gettext call
+    lea  rdi, [rel body_str]
+    CCALL gettext
+    mov  rsi, rax                  ; arg2 = translated body
+    mov  rdi, [rbp-8]                ; arg1 = translated heading
     CCALL adw_alert_dialog_new                ; AdwAlertDialog *adw_alert_dialog_new(const char *heading, const char *body)
-    mov  [rbp-8], rax
+    mov  [rbp-8], rax                            ; now the dialog itself -- the translated heading was only needed for this one call
 
-    mov  rdi, [rbp-8]
-    lea  rsi, [rel resp_cancel]
-    lea  rdx, [rel lbl_cancel]
+    lea  rdi, [rel lbl_cancel]  ; arg1 = msgid -- response IDs (resp_cancel/keep/utf8) are internal, never shown, so only the label needs translating
+    CCALL gettext
+    mov  rdx, rax                 ; arg3 = translated label
+    mov  rdi, [rbp-8]               ; arg1 = dialog
+    lea  rsi, [rel resp_cancel]       ; arg2 = response id
     CCALL adw_alert_dialog_add_response
+    lea  rdi, [rel lbl_keep]
+    CCALL gettext
+    mov  rdx, rax
     mov  rdi, [rbp-8]
     lea  rsi, [rel resp_keep]
-    lea  rdx, [rel lbl_keep]
     CCALL adw_alert_dialog_add_response
+    lea  rdi, [rel lbl_utf8]
+    CCALL gettext
+    mov  rdx, rax
     mov  rdi, [rbp-8]
     lea  rsi, [rel resp_utf8]
-    lea  rdx, [rel lbl_utf8]
     CCALL adw_alert_dialog_add_response
 
     ; "Convert to UTF-8" is the safer/more portable default -- what pressing Enter activates

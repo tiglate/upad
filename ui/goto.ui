@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <interface>
   <object class="GtkWindow" id="goto_dialog">
-    <property name="title">Go To Line</property>
+    <property name="title" translatable="yes">Go To Line</property>
     <property name="resizable">false</property>
     <child>
       <object class="GtkBox">
@@ -17,7 +17,7 @@
             <property name="spacing">8</property>
             <child>
               <object class="GtkLabel">
-                <property name="label">Line number:</property>
+                <property name="label" translatable="yes">Line number:</property>
               </object>
             </child>
             <child>
@@ -40,13 +40,13 @@
             <property name="spacing">8</property>
             <child>
               <object class="GtkButton" id="goto_ok_btn">
-                <property name="label">_OK</property>
+                <property name="label" translatable="yes">_OK</property>
                 <property name="use-underline">true</property>
               </object>
             </child>
             <child>
               <object class="GtkButton" id="goto_cancel_btn">
-                <property name="label">_Cancel</property>
+                <property name="label" translatable="yes">_Cancel</property>
                 <property name="use-underline">true</property>
               </object>
             </child>

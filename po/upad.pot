@@ -1,0 +1,281 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 19:52-0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr ""
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr ""
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr ""
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr ""
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr ""
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr ""
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr ""
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr ""
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr ""
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr ""
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr ""
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr ""
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr ""
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr ""
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr ""
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr ""
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr ""
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr ""
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr ""
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr ""
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr ""
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr ""
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr ""
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr ""
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr ""
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr ""
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr ""
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr ""
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr ""
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr ""
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr ""
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr ""
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr ""
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr ""
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr ""
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr ""
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr ""
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr ""
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr ""
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr ""
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr ""
+
+#: src/about.asm:33
+msgid ""
+"A pure x86-64 assembly recreation of classic Notepad for Linux, built "
+"directly on the GTK4 and libadwaita C ABI (no C glue code). Created by "
+"Tiglate Pileser III (tiglate) with AI assistance."
+msgstr ""
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr ""
+
+#: src/encoding.asm:86
+msgid ""
+"This file wasn't opened as UTF-8 text. Choose whether to save it back in its "
+"original encoding, or convert the document to UTF-8."
+msgstr ""
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr ""
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr ""
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr ""
+
+#: src/encoding.asm:100
+msgid ""
+"This file's contents don't look like valid UTF-8 or UTF-16 text, and "
+"uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit "
+"encoding it might be."
+msgstr ""
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr ""
+
+#: src/encoding.asm:102
+msgid ""
+"This document contains characters that can't be converted back to the "
+"encoding it was originally opened with. Nothing was saved -- try again and "
+"choose to convert to UTF-8 instead."
+msgstr ""
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr ""
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr ""
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr ""
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr ""
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr ""
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr ""
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr ""
+
+#: src/printing.asm:58
+msgid ""
+"The print job could not be completed. Check the printer connection and try "
+"again."
+msgstr ""
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr ""
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr ""
+
+#: src/unsaved.asm:56
+msgid ""
+"This document has unsaved changes. If you close without saving, those "
+"changes will be lost."
+msgstr ""
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr ""

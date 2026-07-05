@@ -26,6 +26,7 @@ global main                    ; the process entry point gcc's CRT calls
 extern on_activate              ; defined in window.asm -- fires when launched with no file argument
 extern on_open_signal            ; defined in window.asm -- fires when launched WITH a file argument (see G_APPLICATION_HANDLES_OPEN below)
 extern register_app_resources    ; defined in resources.asm -- must run before any gtk_builder_new_from_resource call (window.asm, menu.asm)
+extern setup_i18n                 ; defined in i18n.asm -- must run before anything else: gettext() calls and every GtkBuilder XML's translatable="yes" strings both depend on textdomain() having already run
 
 section .rodata
     ; GApplication's "application ID" -- a reverse-DNS-style string GLib
@@ -75,6 +76,12 @@ main:
 
     mov  r12, rdi               ; r12 = argc (rdi is caller-saved -- would not survive the CCALLs below)
     mov  r13, rsi                ; r13 = argv (same reasoning)
+
+    ; --- set up locale/gettext, before absolutely anything else ---------
+    ; every translatable string anywhere in this program (including
+    ; GtkBuilder XML's own translatable="yes" properties/attributes) goes
+    ; through the domain this establishes
+    ICALL setup_i18n
 
     ; --- register the embedded GtkBuilder/GResource bundle -------------
     ; before anything else -- window.asm/menu.asm's ensure_main_window and

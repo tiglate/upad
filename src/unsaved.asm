@@ -52,18 +52,20 @@ section .rodata
     sig_changed       db "changed", 0            ; GtkTextBuffer's own "the content changed" signal
     sig_close_request db "close-request", 0        ; GtkWindow's "titlebar X was clicked" signal
 
-    heading_str  db "Save changes?", 0
-    body_str     db "This document has unsaved changes. If you close without saving, those changes will be lost.", 0
+    heading_str  db "Save changes?", 0  ; i18n:
+    body_str     db "This document has unsaved changes. If you close without saving, those changes will be lost.", 0  ; i18n:
 
     ; AdwAlertDialog response IDs (arbitrary strings we choose, matched
     ; against adw_alert_dialog_choose_finish's return value with strcmp
-    ; in on_unsaved_response below) paired with their button labels.
+    ; in on_unsaved_response below) paired with their button labels. Only
+    ; the labels are user-visible/translatable -- the ids are our own
+    ; internal wire format, never shown.
     resp_cancel  db "cancel", 0
-    lbl_cancel   db "_Cancel", 0
+    lbl_cancel   db "_Cancel", 0  ; i18n:
     resp_discard db "discard", 0
-    lbl_discard  db "_Discard", 0
+    lbl_discard  db "_Discard", 0  ; i18n:
     resp_save    db "save", 0
-    lbl_save     db "_Save", 0
+    lbl_save     db "_Save", 0  ; i18n:
 
 section .bss
     align 8
@@ -222,7 +224,7 @@ on_unsaved_response:
 request_close:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 16                  ; [rbp-8] = the AdwAlertDialog we build, only used on the "ask first" path
+    sub  rsp, 32                  ; [rbp-8] = the AdwAlertDialog we build  [rbp-16] = translated heading, both only used on the "ask first" path
 
     mov  rax, [rel g_dirty]
     test rax, rax
@@ -235,22 +237,36 @@ request_close:
     mov  [rel g_pending_action], rdi   ; remember what we're asking permission for -- on_unsaved_response reads this once the user answers
 
     ; --- build the alert dialog: heading, body, three responses --------
-    lea  rdi, [rel heading_str]        ; arg1 = "Save changes?"
-    lea  rsi, [rel body_str]             ; arg2 = the longer explanation
+    lea  rdi, [rel heading_str]        ; arg1 = msgid
+    CCALL gettext
+    mov  [rbp-16], rax                    ; stash translated heading -- the next gettext call below would otherwise clobber it before adw_alert_dialog_new gets to use it
+
+    lea  rdi, [rel body_str]             ; arg1 = msgid
+    CCALL gettext
+    mov  rsi, rax                          ; arg2 = translated body
+    mov  rdi, [rbp-16]                       ; arg1 = translated heading
     CCALL adw_alert_dialog_new              ; AdwAlertDialog *adw_alert_dialog_new(const char *heading, const char *body)
     mov  [rbp-8], rax
 
+    lea  rdi, [rel lbl_cancel]                   ; arg1 = msgid
+    CCALL gettext
+    mov  rdx, rax                                  ; arg3 = translated label
     mov  rdi, [rbp-8]                          ; arg1 = self
-    lea  rsi, [rel resp_cancel]                  ; arg2 = id = "cancel"
-    lea  rdx, [rel lbl_cancel]                     ; arg3 = label = "_Cancel"
+    lea  rsi, [rel resp_cancel]                  ; arg2 = id = "cancel" (internal, untranslated)
     CCALL adw_alert_dialog_add_response              ; void adw_alert_dialog_add_response(AdwAlertDialog*, const char *id, const char *label)
+
+    lea  rdi, [rel lbl_discard]                        ; arg1 = msgid
+    CCALL gettext
+    mov  rdx, rax                                        ; arg3 = translated label
     mov  rdi, [rbp-8]
     lea  rsi, [rel resp_discard]                       ; id = "discard"
-    lea  rdx, [rel lbl_discard]                          ; label = "_Discard"
     CCALL adw_alert_dialog_add_response
+
+    lea  rdi, [rel lbl_save]                               ; arg1 = msgid
+    CCALL gettext
+    mov  rdx, rax                                            ; arg3 = translated label
     mov  rdi, [rbp-8]
     lea  rsi, [rel resp_save]                              ; id = "save"
-    lea  rdx, [rel lbl_save]                                 ; label = "_Save"
     CCALL adw_alert_dialog_add_response
 
     ; make "Discard" visually stand out as the dangerous option (styled

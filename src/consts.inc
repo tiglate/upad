@@ -173,3 +173,9 @@ DOC_ENCODING_UTF16BE       equ 3
 ; iconv/GLib codeset names are short ("WINDOWS-1252", "SHIFT_JIS",
 ; "ISO-8859-15", ...) -- comfortably bounded well under this.
 CHARSET_NAME_SIZE          equ 32
+
+; ---- locale.h: setlocale() category (i18n.asm) --------------------------
+LC_ALL  equ 6
+
+; ---- unistd.h: access() mode bit (i18n.asm's dev-build locale dir check) --
+F_OK  equ 0

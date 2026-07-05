@@ -233,9 +233,25 @@ extern write
 extern close
 extern lseek
 extern readlink
+extern access
 extern strlen
 extern strcmp
 extern memcpy
+
+; ---- libc/GNU gettext: i18n (i18n.asm's startup setup; gettext() itself
+;      is called from every file with user-visible text to translate) --------
+; setlocale/bindtextdomain/textdomain/gettext/bind_textdomain_codeset are
+; all built into glibc directly on Linux -- no separate -lintl needed.
+extern setlocale
+extern bindtextdomain
+extern bind_textdomain_codeset
+extern textdomain
+extern gettext
+
+; ---- GLib: printf-style string building (statusbar.asm -- combines a
+;      gettext()-translated format string with the actual line/column
+;      numbers) --------------------------------------------------------------
+extern g_strdup_printf
 
 ; ---- libc: errno / error-message text (errdlg.asm's error dialog + log) ------
 extern __errno_location

@@ -48,14 +48,14 @@ extern report_error     ; errdlg.asm -- shows an error dialog and logs, called i
 
 section .rodata
     default_print_font_str  db "Monospace 11", 0   ; same default Format > Font itself opens on when g_font_desc_str is still empty
-    job_name_str             db "UnbloatedPad Document", 0
+    job_name_str             db "UnbloatedPad Document", 0  ; i18n:
 
     sig_begin_print  db "begin-print", 0
     sig_draw_page    db "draw-page", 0
     sig_end_print    db "end-print", 0
 
-    err_msg_print     db "Could not print", 0
-    err_detail_print  db "The print job could not be completed. Check the printer connection and try again.", 0
+    err_msg_print     db "Could not print", 0  ; i18n:
+    err_detail_print  db "The print job could not be completed. Check the printer connection and try again.", 0  ; i18n:
 
     align 8
     pango_scale_dbl  dq 1024.0    ; PANGO_SCALE -- Pango measures everything in 1/1024ths of a layout unit; used to convert the print context's double-precision pixel sizes into the plain gint Pango wants, and back
@@ -496,8 +496,10 @@ on_print_activate:
     mov  rsi, [rel g_print_settings]
     CCALL gtk_print_operation_set_print_settings
 
-    mov  rdi, [rbp-8]
-    lea  rsi, [rel job_name_str]
+    lea  rdi, [rel job_name_str]  ; arg1 = msgid
+    CCALL gettext
+    mov  rsi, rax                    ; arg2 = translated job name
+    mov  rdi, [rbp-8]                  ; arg1 = self
     CCALL gtk_print_operation_set_job_name
 
     ; --- connect the three signals that do the actual pagination/drawing ---
@@ -538,7 +540,12 @@ on_print_activate:
     cmp  rax, GTK_PRINT_OPERATION_RESULT_ERROR
     jne  .check_apply
     lea  rdi, [rel err_msg_print]
-    lea  rsi, [rel err_detail_print]
+    CCALL gettext
+    mov  [rbp-16], rax           ; stash translated summary -- [rbp-16] is otherwise unused on this path (only used further down on the RESULT_APPLY path)
+    lea  rdi, [rel err_detail_print]
+    CCALL gettext
+    mov  rsi, rax                ; arg2 = translated detail
+    mov  rdi, [rbp-16]           ; arg1 = translated summary
     ICALL report_error                          ; errdlg.asm
     jmp  .cleanup
 
