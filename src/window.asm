@@ -6,7 +6,7 @@
 ; the first time GApplication fires either of the two signals it can
 ; start on, and dispatches both of them.
 
-%include "consts.inc"    ; GTK_ORIENTATION_VERTICAL, GTK_POLICY_AUTOMATIC, GTK_WRAP_WORD_CHAR, TRUE
+%include "consts.inc"    ; EXE_PATH_BUF_SIZE
 %include "callconv.inc"  ; CCALL/ICALL macros
 %include "extern.inc"    ; extern declarations for every GTK call used below
 
@@ -55,6 +55,15 @@ section .rodata
     ; silently fail (verified empirically: has_icon() stayed false until
     ; this was pointed at the parent instead).
     icons_subdir_str   db "/icons", 0
+
+    ; window.ui's GResource path (see ui/ui.gresource.xml's prefix and
+    ; src/resources.asm, which registers the bundle this resolves against)
+    ; and the widget IDs ensure_main_window fetches out of it below.
+    window_ui_resource_path  db "/org/unbloatedpad/Editor/ui/window.ui", 0
+    id_header_bar            db "header_bar", 0
+    id_root_box              db "root_box", 0
+    id_scrolled_window       db "scrolled_window", 0
+    id_text_view             db "text_view", 0
 
 section .bss
     align 8
@@ -228,45 +237,65 @@ ensure_main_window:
     lea  rsi, [rel app_icon_name_str]
     CCALL gtk_window_set_icon_name        ; void gtk_window_set_icon_name(GtkWindow*, const char *name)
 
-    ; a plain GtkHeaderBar just for the standard minimize/maximize/close
-    ; window controls -- the classic File/Edit/... menu bar built below is
-    ; still the primary means of interacting with the app, not this bar
-    CCALL gtk_header_bar_new       ; GtkWidget *gtk_header_bar_new(void) -- takes no arguments
-    mov  rdi, [rel g_window]       ; arg1 = window
-    mov  rsi, rax                  ; arg2 = the header bar just created (still in rax, untouched since the call above)
-    CCALL gtk_window_set_titlebar  ; void gtk_window_set_titlebar(GtkWindow*, GtkWidget*)
+    ; --- the header bar, layout box, scrolled window, and text view -----
+    ; all loaded from window.ui (GtkBuilder XML, embedded as a GResource --
+    ; see resources.asm) instead of built widget-by-widget here: every
+    ; property that used to be set with an explicit CCALL below (margins,
+    ; vexpand/hexpand, monospace, wrap-mode, text-view padding, scrollbar
+    ; policy) now lives as a <property> in ui/window.ui instead.
+    sub  rsp, 16                      ; [rbp-16] = the GtkBuilder*, must survive several calls below
 
-    ; --- actions, accelerators, and the title (before any content exists --
-    ;     none of these three need widgets built yet, only g_window) -------
+    lea  rdi, [rel window_ui_resource_path]
+    CCALL gtk_builder_new_from_resource  ; GtkBuilder *gtk_builder_new_from_resource(const gchar *resource_path) -- aborts loudly if resources.asm's register_app_resources hasn't run yet, which is exactly why main.asm calls that first
+    mov  [rbp-16], rax
+
+    mov  rdi, [rbp-16]              ; arg1 = builder
+    lea  rsi, [rel id_header_bar]   ; arg2 = "header_bar"
+    CCALL gtk_builder_get_object    ; GObject *gtk_builder_get_object(GtkBuilder*, const gchar *name) -- borrowed pointer, fine to use before the builder is unreffed below
+    mov  rsi, rax                   ; arg2 (for the call below) = the header bar -- captured now, before rdi is reloaded
+    mov  rdi, [rel g_window]        ; arg1 = window
+    CCALL gtk_window_set_titlebar   ; void gtk_window_set_titlebar(GtkWindow*, GtkWidget*)
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_root_box]
+    CCALL gtk_builder_get_object
+    mov  [rel g_box], rax
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_scrolled_window]
+    CCALL gtk_builder_get_object
+    mov  [rel g_scrolled], rax
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_text_view]
+    CCALL gtk_builder_get_object
+    mov  [rel g_textview], rax
+
+    mov  rdi, [rel g_textview]
+    CCALL gtk_text_view_get_buffer  ; GtkTextBuffer *gtk_text_view_get_buffer(GtkTextView*) -- the model behind the view; almost every editing operation elsewhere in the program touches this, not g_textview directly
+    mov  [rel g_buffer], rax
+
+    mov  rdi, [rel g_window]  ; arg1 = window
+    mov  rsi, [rel g_box]     ; arg2 = child = the whole loaded layout (menu bar/status bar get inserted into it further below -- a live container, so attaching it to the window now vs. after is equivalent)
+    CCALL gtk_window_set_child
+
+    mov  rdi, [rbp-16]
+    CCALL g_object_unref  ; drop our ref on the builder -- header_bar (via set_titlebar) and root_box (via set_child, which transitively holds scrolled_window/text_view as its own descendants) are now owned by the window's own widget tree, so they stay alive without it
+
+    ; --- actions, accelerators, and the title ----------------------------
     ICALL setup_win_actions    ; actions.asm -- registers every "win.*" GAction
     ICALL setup_app_actions    ; actions.asm -- registers "app.quit"
     ICALL setup_accels         ; accels.asm -- keyboard shortcuts for the actions just registered
     ICALL update_window_title  ; fileio.asm -- sets the initial "Untitled - UnbloatedPad" title (g_current_path is still NULL at this point)
 
-    ; --- the top-level vertical layout: menu bar, then text area, then status bar ---
-    mov  edi, GTK_ORIENTATION_VERTICAL
-    xor  esi, esi      ; spacing = 0 (the pieces are visually distinct enough without extra gaps)
-    CCALL gtk_box_new  ; GtkWidget *gtk_box_new(GtkOrientation, int spacing)
-    mov  [rel g_box], rax
-
-    ; a few pixels so nothing sits flush against the window's rounded corners
-    mov  rdi, [rel g_box]
-    mov  esi, 3
-    CCALL gtk_widget_set_margin_start
-    mov  rdi, [rel g_box]
-    mov  esi, 3
-    CCALL gtk_widget_set_margin_end
-    mov  rdi, [rel g_box]
-    mov  esi, 3
-    CCALL gtk_widget_set_margin_top
-    mov  rdi, [rel g_box]
-    mov  esi, 3
-    CCALL gtk_widget_set_margin_bottom
-
-    ICALL build_menubar    ; menu.asm -- builds the File/Edit/Format/View/Help GtkPopoverMenuBar, returns it in rax
-    mov  rdi, [rel g_box]  ; arg1 = parent = the layout box
-    mov  rsi, rax          ; arg2 = child = the menu bar widget just built (still in rax)
-    CCALL gtk_box_append   ; void gtk_box_append(GtkBox*, GtkWidget*) -- appends at the end (here: the top, since this is the first child)
+    ; --- the menu bar, inserted as root_box's first child ----------------
+    ; (window.ui declares scrolled_window as root_box's only static child,
+    ; so this has to go in explicitly at the front, not just appended)
+    ICALL build_menubar               ; menu.asm -- loads menu.ui, returns the GtkPopoverMenuBar widget in rax
+    mov  rdi, [rel g_box]             ; arg1 = box
+    mov  rsi, rax                     ; arg2 = child = the menu bar widget just built (still in rax)
+    xor  edx, edx                     ; arg3 = sibling = NULL -> insert at the very start
+    CCALL gtk_box_insert_child_after  ; void gtk_box_insert_child_after(GtkBox*, GtkWidget *child, GtkWidget *sibling)
 
     ; the View menu's Dark Mode item exists now (build_menubar just made
     ; it), so it's safe to read/correct its initial checked state to
@@ -274,93 +303,18 @@ ensure_main_window:
     ; already is -- see format.asm for why that matters
     ICALL init_dark_mode_state
 
-    ; --- the text editing widget itself ---------------------------------
-    CCALL gtk_text_view_new                    ; GtkWidget *gtk_text_view_new(void)
-    mov  [rel g_textview], rax
-
-    mov  rdi, [rel g_textview]
-    CCALL gtk_text_view_get_buffer              ; GtkTextBuffer *gtk_text_view_get_buffer(GtkTextView*) -- the model behind the view; almost every editing operation elsewhere in the program touches this, not g_textview directly
-    mov  [rel g_buffer], rax
-
-    mov  rdi, [rel g_textview]
-    mov  esi, TRUE
-    CCALL gtk_widget_set_vexpand                ; let the text view claim all extra vertical space in the box
-    mov  rdi, [rel g_textview]
-    mov  esi, TRUE
-    CCALL gtk_widget_set_hexpand                 ; ... and all extra horizontal space too
-
-    ; monospace + a small top/left margin reads as "classic Notepad", not
-    ; a GNOME text widget default
-    mov  rdi, [rel g_textview]
-    mov  esi, TRUE
-    CCALL gtk_text_view_set_monospace
-
-    ; matches win.word-wrap's initial GActionEntry state ("true") in
-    ; actions.asm -- if that default ever changes, this must change with it
-    mov  rdi, [rel g_textview]
-    mov  esi, GTK_WRAP_WORD_CHAR
-    CCALL gtk_text_view_set_wrap_mode
-
-    ; a little breathing room around the text itself, so it doesn't sit
-    ; flush against the scrolled window's edge / the window's rounded corners
-    ; (these four set the *text's* internal padding, distinct from the
-    ; widget-level margins used elsewhere in this function -- GtkTextView
-    ; has its own dedicated margin properties for exactly this)
-    mov  rdi, [rel g_textview]
-    mov  esi, 5
-    CCALL gtk_text_view_set_left_margin
-    mov  rdi, [rel g_textview]
-    mov  esi, 5
-    CCALL gtk_text_view_set_right_margin
-    mov  rdi, [rel g_textview]
-    mov  esi, 5
-    CCALL gtk_text_view_set_top_margin
-    mov  rdi, [rel g_textview]
-    mov  esi, 5
-    CCALL gtk_text_view_set_bottom_margin
-
-    ; --- wrap the text view in a scrollable container -------------------
-    CCALL gtk_scrolled_window_new                ; GtkWidget *gtk_scrolled_window_new(void)
-    mov  [rel g_scrolled], rax
-
-    mov  rdi, [rel g_scrolled]
-    mov  esi, GTK_POLICY_AUTOMATIC  ; horizontal scrollbar: show only when needed
-    mov  edx, GTK_POLICY_AUTOMATIC  ; vertical scrollbar: same
-    CCALL gtk_scrolled_window_set_policy
-
-    mov  rdi, [rel g_scrolled]
-    mov  esi, TRUE
-    CCALL gtk_widget_set_vexpand                   ; let the scrolled window (and thus the text area) fill available vertical space in g_box
-    mov  rdi, [rel g_scrolled]
-    mov  esi, TRUE
-    CCALL gtk_widget_set_hexpand                    ; ... and horizontal space too
-
-    mov  rdi, [rel g_scrolled]           ; arg1 = the scrolled window
-    mov  rsi, [rel g_textview]           ; arg2 = child = the text view
-    CCALL gtk_scrolled_window_set_child  ; void gtk_scrolled_window_set_child(GtkScrolledWindow*, GtkWidget*)
-
-    mov  rdi, [rel g_box]       ; arg1 = parent = the layout box
-    mov  rsi, [rel g_scrolled]  ; arg2 = child = the scrolled window (holding the text view)
-    CCALL gtk_box_append        ; appended after the menu bar -- this becomes the middle of the three stacked pieces
-
     ; g_scrolled's vertical GtkAdjustment is one of the line-number
     ; gutter's redraw triggers, so this can only happen once g_scrolled
     ; exists (unlike most of the setup above, which only needs g_textview)
-    ICALL setup_line_numbers                             ; linenum.asm -- attaches the gutter widget, on by default (matches win.line-numbers' initial GActionEntry state ("true") in actions.asm)
+    ICALL setup_line_numbers  ; linenum.asm -- attaches the gutter widget, on by default (matches win.line-numbers' initial GActionEntry state ("true") in actions.asm)
 
-    ; --- the "Ln X, Col Y" status bar, last in the stack ------------------
+    ; --- the "Ln X, Col Y" status bar, appended last ----------------------
     ICALL build_statusbar  ; statusbar.asm -- builds the label, wires up its own live-update signal, returns it in rax
     mov  rdi, [rel g_box]  ; arg1 = parent = the layout box
     mov  rsi, rax          ; arg2 = child = the status bar label (still in rax)
     CCALL gtk_box_append   ; appended last -- ends up at the bottom of the window
 
-    ; --- attach the finished layout to the window, then wire up the ------
-    ;     unsaved-changes-prompt machinery now that g_window/g_buffer exist --
-    mov  rdi, [rel g_window]    ; arg1 = window
-    mov  rsi, [rel g_box]       ; arg2 = child = the whole vertical stack
-    CCALL gtk_window_set_child  ; void gtk_window_set_child(GtkWindow*, GtkWidget*)
+    ICALL setup_unsaved_tracking  ; unsaved.asm -- connects g_buffer's "changed" signal (dirty tracking) and g_window's "close-request" signal (the titlebar-X unsaved-changes prompt)
 
-    ICALL setup_unsaved_tracking                               ; unsaved.asm -- connects g_buffer's "changed" signal (dirty tracking) and g_window's "close-request" signal (the titlebar-X unsaved-changes prompt)
-
-    leave                                                       ; mov rsp, rbp; pop rbp
+    leave                         ; mov rsp, rbp; pop rbp
     ret

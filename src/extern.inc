@@ -21,6 +21,14 @@ extern g_malloc
 extern g_free
 extern g_path_get_basename
 
+; ---- GLib/GIO: GResource (resources.asm) / GtkBuilder (window.asm, menu.asm) --
+extern g_bytes_new_static
+extern g_bytes_unref
+extern g_resource_new_from_data
+extern g_resources_register
+extern gtk_builder_new_from_resource
+extern gtk_builder_get_object
+
 ; ---- GLib: charset validation/conversion (encoding.asm) ------------------
 extern g_utf8_validate
 extern g_convert
@@ -64,6 +72,7 @@ extern gtk_icon_theme_add_search_path
 ; ---- GTK4: widgets ----------------------------------------------------------
 extern gtk_box_new
 extern gtk_box_append
+extern gtk_box_insert_child_after
 extern gtk_scrolled_window_new
 extern gtk_scrolled_window_set_child
 extern gtk_scrolled_window_set_policy
@@ -123,7 +132,11 @@ extern gtk_button_new_with_mnemonic
 extern gtk_spin_button_new_with_range
 extern gtk_spin_button_get_value_as_int
 extern gtk_spin_button_set_value
+extern gtk_spin_button_update
 extern gtk_widget_grab_focus
+extern gtk_event_controller_key_new
+extern gtk_widget_add_controller
+extern gtk_event_controller_set_propagation_phase
 
 ; ---- GTK4: font dialog (GTK 4.10+) / CSS-based font application --------------
 extern gtk_font_dialog_new

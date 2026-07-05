@@ -19,12 +19,32 @@ libadwaita-1-dev, and if pkg-config still can't see them, see the \
 "Troubleshooting" section in README.md)
 endif
 
+GLIB_COMPILE_RESOURCES := $(shell command -v glib-compile-resources 2>/dev/null)
+ifeq ($(strip $(GLIB_COMPILE_RESOURCES)),)
+$(error glib-compile-resources not found (part of libglib2.0-dev / glib2.0-dev) \
+-- needed to compile ui/*.ui into the embedded GResource bundle)
+endif
+
 SRC_DIR   := src
 BUILD_DIR := build
 SOURCES   := $(wildcard $(SRC_DIR)/*.asm)
 INCLUDES  := $(wildcard $(SRC_DIR)/*.inc)
 OBJECTS   := $(patsubst $(SRC_DIR)/%.asm,$(BUILD_DIR)/%.o,$(SOURCES))
 TARGET    := upad
+
+# --- embedded UI (GtkBuilder XML -> GResource -> linked-in object) -----
+# ui/*.ui are compiled by glib-compile-resources into one raw GResource
+# binary bundle (build/ui.gresource -- deliberately without
+# --generate-source, so no C is generated/compiled anywhere in this
+# project), then objcopy turns that binary into build/resources.o, a
+# plain relocatable object exposing it as _binary_ui_gresource_start/_end
+# (see src/resources.asm, which extern's those two symbols and registers
+# the bundle at startup). objcopy is run from inside $(BUILD_DIR) with a
+# bare filename so those symbol names come out exactly that -- an input
+# path with directory components gets folded into the symbol name too.
+UI_DIR      := ui
+UI_SOURCES  := $(wildcard $(UI_DIR)/*.ui)
+UI_MANIFEST := $(UI_DIR)/ui.gresource.xml
 
 # --- version ---------------------------------------------------------
 # Single source of truth for upad's version number: the .version file at
@@ -71,11 +91,29 @@ release: clean $(TARGET)
 	strip --strip-all $(TARGET)
 	@echo "Stripped release build: $(TARGET) ($$(ls -lh $(TARGET) | awk '{print $$5}')B)"
 
-$(TARGET): $(OBJECTS)
-	$(CC) -o $@ $^ $(LIBS)
+$(TARGET): $(OBJECTS) $(BUILD_DIR)/ui_data.o
+	# -z noexecstack: every src/*.asm object carries its own
+	# .note.GNU-stack marker (see callconv.inc) so the linker infers a
+	# non-executable stack on its own, but $(BUILD_DIR)/ui_data.o (raw
+	# objcopy output, not assembled by us) carries no such marker --
+	# without this flag the linker falls back to its old insecure
+	# executable-stack default and warns about it.
+	$(CC) -o $@ $^ $(LIBS) -Wl,-z,noexecstack
 
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm $(INCLUDES) | $(BUILD_DIR)
 	$(ASM) $(ASMFLAGS) -o $@ $<
+
+$(BUILD_DIR)/ui.gresource: $(UI_MANIFEST) $(UI_SOURCES) | $(BUILD_DIR)
+	glib-compile-resources --sourcedir=$(UI_DIR) --target=$@ $(UI_MANIFEST)
+
+# Distinct from build/resources.o (the *code* in src/resources.asm, built
+# by the pattern rule above) -- this is the *data* blob that code's
+# extern'd _binary_ui_gresource_start/_end symbols point into. objcopy
+# names those symbols after ui.gresource's basename, not this output
+# filename, so naming this ui_data.o rather than resources.o is just to
+# not collide with the pattern rule's own build/resources.o target.
+$(BUILD_DIR)/ui_data.o: $(BUILD_DIR)/ui.gresource
+	cd $(BUILD_DIR) && objcopy -I binary -O elf64-x86-64 -B i386:x86-64 ui.gresource ui_data.o
 
 # Generated, not hand-written -- see the VERSION comment above. Lives under
 # build/ (gitignored) rather than src/, same reasoning as every other build

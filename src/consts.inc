@@ -122,6 +122,17 @@ PENDING_OPEN  equ 2
 EXE_PATH_BUF_SIZE  equ 4096
 PENDING_QUIT  equ 3
 
+; ---- gdk/gdkkeysyms.h: numpad Enter, not bound to GtkText/GtkSpinButton's
+;      own "activate" keybinding the way plain Return/ISO_Enter are (see
+;      finddlg.asm's on_goto_spin_key_pressed/on_find_entry_key_pressed) --
+GDK_KEY_KP_Enter  equ 0xff8d
+GDK_KEY_Escape    equ 0xff1b
+GDK_KEY_Return    equ 0xff0d
+GDK_KEY_ISO_Enter equ 0xfe34
+
+; ---- gtk/gtkenums.h: GtkPropagationPhase ---------------------------------
+GTK_PHASE_CAPTURE equ 1
+
 ; ---- glib/gmessages.h: GLogLevelFlags -----------------------------------
 G_LOG_LEVEL_WARNING  equ 1 << 4
 

@@ -3,18 +3,22 @@
 ; LICENSE at the repo root for the full text.
 
 ; finddlg.asm -- Find, Replace, and Go To Line. Each is a small plain
-; GtkWindow (not modal, transient-for the main window), built lazily the
-; first time it's needed and then just shown/hidden on reuse -- closing
-; one via its titlebar X hides it too (close-request is intercepted)
-; rather than destroying it, so the same dialog+widgets are reused for
-; the life of the process.
+; GtkWindow (not modal, transient-for the main window), loaded from
+; ui/finddlg.ui (a GtkBuilder XML file, embedded as a GResource -- see
+; resources.asm) the first time any one of the three is needed, then just
+; shown/hidden on reuse -- closing one via its titlebar X hides it too
+; (close-request is intercepted) rather than destroying it, so the same
+; dialog+widgets are reused for the life of the process. All three share
+; one GtkBuilder load (see ensure_finddlg_loaded) rather than each lazily
+; loading its own -- simpler than three separate loads, and harmless since
+; none of them are shown until their own on_*_activate presents them.
 ;
 ; The actual search (find_next) walks GtkTextIter/gtk_text_iter_forward_search
 ; directly and always wraps around at end-of-buffer; Replace and Replace
 ; All both build on top of it so there is exactly one place that knows how
 ; to find a match.
 
-%include "consts.inc"          ; G_CONNECT_DEFAULT, GTK_ORIENTATION_*, GTK_TEXT_SEARCH_TEXT_ONLY, FIND_TEXT_SIZE, TRUE/FALSE
+%include "consts.inc"          ; G_CONNECT_DEFAULT, GTK_TEXT_SEARCH_TEXT_ONLY, FIND_TEXT_SIZE, TRUE/FALSE, GDK_KEY_KP_Enter
 %include "callconv.inc"        ; CCALL/ICALL macros
 %include "extern.inc"          ; extern declarations for every GTK/GLib call used below
 
@@ -32,38 +36,48 @@ section .rodata
     sig_activate         db "activate", 0          ; GtkEntry/GtkSpinButton's "user pressed Enter" signal
     sig_clicked          db "clicked", 0             ; GtkButton's signal
     sig_close_request    db "close-request", 0        ; GtkWindow's "titlebar X was clicked" signal
+    sig_key_pressed      db "key-pressed", 0            ; GtkEventControllerKey's signal -- see on_goto_spin_key_pressed/on_find_entry_key_pressed/on_dialog_escape_pressed
+    sig_map              db "map", 0                      ; GtkWidget's signal, fired once a dialog is actually mapped by the windowing system -- see on_dialog_map_grab_focus
 
-    title_find           db "Find", 0
-    title_replace        db "Replace", 0
-    title_goto           db "Go To Line", 0
-    lbl_find_what        db "Find what:", 0
-    lbl_replace_with     db "Replace with:", 0
-    lbl_line_number      db "Line number:", 0
-    lbl_find_next_btn    db "_Find Next", 0
-    lbl_replace_btn      db "_Replace", 0
-    lbl_replace_all_btn  db "Replace _All", 0
-    lbl_cancel_btn       db "_Cancel", 0
-    lbl_ok_btn           db "_OK", 0
-
-section .data
-    align 8
-    ; gtk_spin_button_new_with_range takes three *doubles* (min, max,
-    ; step) -- there's no way to load an arbitrary non-zero float
-    ; immediate directly into an XMM register on x86, so these live in
-    ; memory and get loaded with `movsd` at the two call sites below.
-    dq_one     dq 1.0
-    dq_million dq 1000000.0
+    ; finddlg.ui's GResource path and the widget IDs fetched out of it by
+    ; ensure_finddlg_loaded below.
+    finddlg_ui_resource_path  db "/org/unbloatedpad/Editor/ui/finddlg.ui", 0
+    id_find_dialog            db "find_dialog", 0
+    id_find_entry             db "find_entry", 0
+    id_find_next_btn          db "find_next_btn", 0
+    id_find_cancel_btn        db "find_cancel_btn", 0
+    id_replace_dialog         db "replace_dialog", 0
+    id_replace_find_entry     db "replace_find_entry", 0
+    id_replace_with_entry     db "replace_with_entry", 0
+    id_replace_find_next_btn  db "replace_find_next_btn", 0
+    id_replace_btn            db "replace_btn", 0
+    id_replace_all_btn        db "replace_all_btn", 0
+    id_replace_cancel_btn     db "replace_cancel_btn", 0
+    id_goto_dialog            db "goto_dialog", 0
+    id_goto_spin              db "goto_spin", 0
+    id_goto_ok_btn            db "goto_ok_btn", 0
+    id_goto_cancel_btn        db "goto_cancel_btn", 0
 
 section .bss
     align 8
-    ; Find dialog widgets (built lazily by ensure_find_dialog)
+    ; The GtkBuilder itself, kept alive for the whole process rather than
+    ; unreffed once ensure_finddlg_loaded is done with it: find_dialog/
+    ; replace_dialog/goto_dialog are plain TOPLEVEL GtkWindows, so (unlike
+    ; window.ui's root_box/header_bar, which become the main window's own
+    ; child/titlebar and are kept alive by ITS reference) nothing else
+    ; would hold a reference to them once the builder that constructed
+    ; them goes away. Keeping the builder itself alive is the simplest way
+    ; to guarantee that -- exactly the lifetime these three dialogs need
+    ; anyway (built once, reused for the program's whole life).
+    g_finddlg_builder      resq 1
+    ; Find dialog widgets
     g_find_dialog         resq 1
     g_find_entry           resq 1
-    ; Replace dialog widgets (built lazily by ensure_replace_dialog)
+    ; Replace dialog widgets
     g_replace_dialog       resq 1
     g_replace_find_entry   resq 1
     g_replace_with_entry   resq 1
-    ; Go To Line dialog widgets (built lazily by ensure_goto_dialog)
+    ; Go To Line dialog widgets
     g_goto_dialog           resq 1
     g_goto_spin             resq 1
     ; the last search/replace terms, kept independent of whichever dialog
@@ -75,44 +89,34 @@ section .bss
 section .text
 
 ; -------------------------------------------------------------------------
-; GtkWidget *new_dialog(const char *title)
-; Common shell for all three dialogs: plain non-modal GtkWindow, transient
-; for the main window, not resizable, and close-request intercepted so
-; the titlebar X hides it instead of destroying it (so g_find_dialog/
-; g_replace_dialog/g_goto_dialog stay valid pointers for the rest of the
-; program's life once built, safe to reuse without a NULL check beyond
-; the initial "has this been built at all" one each ensure_*_dialog does).
+; void setup_dialog_shell(GtkWindow *dialog)
+; The runtime-only setup common to all three dialogs -- everything that
+; ui/finddlg.ui can't express statically because it depends on g_window
+; existing (transient-for) or is a signal connection (this project's
+; GtkBuilder usage deliberately keeps every signal wired via an explicit
+; g_signal_connect_data call in assembly, not <signal> handler attributes
+; -- see finddlg.ui's own header comment). Title and resizable=false ARE
+; static XML properties now, so this is a shorter list than the old
+; new_dialog helper it replaces.
 ; -------------------------------------------------------------------------
-new_dialog:
+setup_dialog_shell:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 16                 ; [rbp-8]=title (the incoming arg, saved immediately -- every call below is free to clobber rdi)  [rbp-16]=the new GtkWindow, needed across several setup calls
-
+    sub  rsp, 32                 ; [rbp-8] = dialog (the incoming arg, saved since every call below is free to clobber rdi)  [rbp-24] = scratch: the Escape-catching GtkEventControllerKey
     mov  [rbp-8], rdi
 
-    CCALL gtk_window_new           ; GtkWidget *gtk_window_new(void)
-    mov  [rbp-16], rax
+    mov  rdi, [rbp-8]                     ; arg1 = the dialog
+    mov  rsi, [rel g_window]                ; arg2 = the main window
+    CCALL gtk_window_set_transient_for        ; ties this dialog to the main window (stays above it, minimizes/restores together on most window managers)
 
-    mov  rdi, [rbp-16]               ; arg1 = the new window
-    mov  rsi, [rbp-8]                 ; arg2 = title
-    CCALL gtk_window_set_title
-
-    mov  rdi, [rbp-16]                 ; arg1 = the new window
-    mov  rsi, [rel g_window]            ; arg2 = the main window
-    CCALL gtk_window_set_transient_for    ; ties this dialog to the main window (stays above it, minimizes/restores together on most window managers)
-
-    mov  rdi, [rbp-16]
+    mov  rdi, [rbp-8]
     mov  esi, FALSE                       ; non-modal -- the user can still interact with the main window (or another dialog) while this one is open, matching classic Notepad's own modeless Find/Replace
     CCALL gtk_window_set_modal
-
-    mov  rdi, [rbp-16]
-    mov  esi, FALSE                        ; not resizable -- these are small, fixed-content dialogs
-    CCALL gtk_window_set_resizable
 
     ; intercept the titlebar close button: without this, closing via X
     ; would DESTROY the widget, leaving g_find_dialog/etc. pointing at
     ; freed memory the next time it's needed
-    mov  rdi, [rbp-16]                      ; arg1 = instance = the new window
+    mov  rdi, [rbp-8]                       ; arg1 = instance = the dialog
     lea  rsi, [rel sig_close_request]        ; arg2 = "close-request"
     lea  rdx, [rel on_dialog_close_request]   ; arg3 = callback
     xor  ecx, ecx                              ; arg4 = user_data = NULL (the handler uses rdi/the window itself, doesn't need it)
@@ -120,19 +124,43 @@ new_dialog:
     mov  r9d, G_CONNECT_DEFAULT                  ; arg6 = flags = 0
     CCALL g_signal_connect_data
 
-    mov  rax, [rbp-16]                            ; return value = the finished window
+    ; Escape dismisses this dialog too, same as Cancel/the titlebar X (see
+    ; on_dialog_escape_pressed) -- shared across all three dialogs since
+    ; this helper runs once per dialog
+    CCALL gtk_event_controller_key_new  ; GtkEventController *gtk_event_controller_key_new(void)
+    mov  [rbp-24], rax                  ; stash across the next two calls
+
+    mov  rdi, [rbp-8]     ; arg1 = widget = this dialog
+    mov  rsi, [rbp-24]      ; arg2 = controller
+    CCALL gtk_widget_add_controller   ; void gtk_widget_add_controller(GtkWidget*, GtkEventController*) -- widget takes ownership of the controller
+
+    mov  rdi, [rbp-24]                          ; arg1 = instance = the controller
+    lea  rsi, [rel sig_key_pressed]               ; arg2 = "key-pressed"
+    lea  rdx, [rel on_dialog_escape_pressed]        ; arg3 = callback
+    mov  rcx, [rbp-8]                                 ; arg4 = user_data = this dialog -- tells the shared handler WHICH dialog to hide
+    xor  r8, r8                                         ; arg5 = destroy_data = NULL
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
     leave
     ret
 
 ; gboolean on_dialog_close_request(GtkWindow *window, gpointer user_data)
-; Shared by all three dialogs (connected once each, in new_dialog above).
-; Returning TRUE tells GTK "I handled this, don't run the default
+; Shared by all three dialogs (connected once each, in setup_dialog_shell
+; above). Returning TRUE tells GTK "I handled this, don't run the default
 ; destroy-the-window behavior".
 on_dialog_close_request:
     push rbp
     mov  rbp, rsp
     mov  esi, FALSE                 ; arg2 = visible = FALSE (rdi is already the window -- this function's own incoming arg1)
     CCALL gtk_widget_set_visible     ; hide instead of destroy
+    ; hiding a window does NOT hand keyboard focus back to whatever had it
+    ; before this dialog stole it -- left alone, the main window's own
+    ; "last focused" widget stays whatever it was at the moment the dialog
+    ; was opened (typically the menu bar, since these dialogs are opened
+    ; from Edit menu items), so the buffer never gets it back on its own
+    mov  rdi, [rel g_textview]
+    CCALL gtk_widget_grab_focus
     mov  eax, TRUE                    ; tell GTK the close request was handled -- don't also destroy the window
     pop  rbp
     ret
@@ -140,80 +168,63 @@ on_dialog_close_request:
 ; void on_dialog_cancel_clicked(GtkButton *button, gpointer user_data)
 ; user_data must be the dialog to hide -- shared by all three dialogs'
 ; Cancel buttons, each connected with its own dialog as user_data (see
-; the g_signal_connect_data calls in each ensure_*_dialog below, where
-; rcx is set to [rbp-8], the dialog itself, rather than NULL).
+; the g_signal_connect_data calls in ensure_finddlg_loaded below, where
+; rcx is set to the dialog itself, rather than NULL).
 on_dialog_cancel_clicked:
     push rbp
     mov  rbp, rsp
     mov  rdi, rsi                    ; arg1 = the dialog to hide = this function's own incoming user_data (rsi, the 2nd GtkButton "clicked" signal argument)
     mov  esi, FALSE                   ; arg2 = visible = FALSE
     CCALL gtk_widget_set_visible
+    mov  rdi, [rel g_textview]        ; see on_dialog_close_request's comment -- same reason focus needs to be reclaimed explicitly
+    CCALL gtk_widget_grab_focus
     pop  rbp
     ret
 
-; void apply_dialog_box_margins(GtkWidget *box) -- so a dialog's content
-; doesn't sit flush against the (rounded-corner) window edge
-apply_dialog_box_margins:
+; gboolean on_dialog_escape_pressed(GtkEventControllerKey *controller,
+;   guint keyval, guint keycode, GdkModifierType state, gpointer user_data)
+; Shared by all three dialogs (connected once each, in setup_dialog_shell
+; above) -- Escape dismisses whichever dialog is open, the same as
+; clicking Cancel or closing via the titlebar X.
+on_dialog_escape_pressed:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 16                 ; [rbp-8] = box (the incoming arg, saved since each margin call below clobbers rdi)
-    mov  [rbp-8], rdi
+    cmp  esi, GDK_KEY_Escape  ; esi = keyval (this handler's own incoming arg2)
+    jne  .not_ours
 
-    mov  rdi, [rbp-8]
-    mov  esi, 10
-    CCALL gtk_widget_set_margin_start
-    mov  rdi, [rbp-8]
-    mov  esi, 10
-    CCALL gtk_widget_set_margin_end
-    mov  rdi, [rbp-8]
-    mov  esi, 10
-    CCALL gtk_widget_set_margin_top
-    mov  rdi, [rbp-8]
-    mov  esi, 10
-    CCALL gtk_widget_set_margin_bottom
+    mov  rdi, r8               ; arg1 = the dialog to hide = this handler's own incoming user_data (r8, "key-pressed"'s 5th argument)
+    mov  esi, FALSE              ; arg2 = visible = FALSE
+    CCALL gtk_widget_set_visible
+    mov  rdi, [rel g_textview]     ; same reason as on_dialog_cancel_clicked/on_dialog_close_request -- hiding a window doesn't hand focus back on its own
+    CCALL gtk_widget_grab_focus
 
-    leave
+    mov  eax, TRUE                   ; handled -- stop this key event from propagating further
+    jmp  .ret
+.not_ours:
+    xor  eax, eax                      ; not our key -- let GTK handle it normally
+.ret:
+    pop  rbp
     ret
 
-; -------------------------------------------------------------------------
-; void append_label_entry_row(GtkBox *parent, const char *label_text,
-;                              GtkWidget *entry)
-; Builds one horizontal "Label: [entry]" row and appends it to parent --
-; the shared layout piece behind Find's "Find what:", Replace's two rows,
-; and Go To Line's "Line number:".
-; -------------------------------------------------------------------------
-append_label_entry_row:
+; void on_dialog_map_grab_focus(GtkWidget *widget, gpointer user_data)
+; Shared "map" handler for all three dialogs (connected once each, in
+; ensure_finddlg_loaded, with user_data = that dialog's primary
+; entry/spin button). gtk_widget_grab_focus's own docs note it silently
+; does nothing if "its ancestor window is not onscreen" -- which, right
+; after gtk_window_present() returns, isn't always true yet (the
+; underlying surface may not have finished being mapped by the
+; compositor), so the grab_focus call in on_find_activate/
+; on_replace_activate/on_goto_activate can intermittently no-op, leaving
+; the FIRST keystroke (e.g. the first Enter in the Go To spin button) to
+; go nowhere, and requiring a second press once focus has actually
+; settled. Regrabbing here, once the dialog is genuinely mapped, closes
+; that race.
+on_dialog_map_grab_focus:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 32                 ; four local slots, one per argument/intermediate: [rbp-8]=parent [rbp-16]=label_text [rbp-24]=entry [rbp-32]=the row box we're building -- all three incoming args need to survive the several calls below, so none of them can stay in a register
-    mov  [rbp-8], rdi
-    mov  [rbp-16], rsi
-    mov  [rbp-24], rdx
-
-    mov  edi, GTK_ORIENTATION_HORIZONTAL
-    mov  esi, 8                     ; spacing between the label and the entry
-    CCALL gtk_box_new                 ; the row itself
-    mov  [rbp-32], rax
-
-    mov  rdi, [rbp-16]                 ; arg1 = the label text
-    CCALL gtk_label_new                  ; GtkWidget *gtk_label_new(const char*)
-    mov  rdi, [rbp-32]                    ; arg1 = the row
-    mov  rsi, rax                          ; arg2 = the label widget just created (still in rax)
-    CCALL gtk_box_append                     ; label goes first (left side)
-
-    mov  rdi, [rbp-24]                        ; the entry widget
-    mov  esi, TRUE
-    CCALL gtk_widget_set_hexpand                ; let the entry (not the label) claim any extra horizontal space, so it grows to fill the dialog's width
-
-    mov  rdi, [rbp-32]                            ; arg1 = the row
-    mov  rsi, [rbp-24]                              ; arg2 = the entry
-    CCALL gtk_box_append                               ; entry goes second (right side, after the label)
-
-    mov  rdi, [rbp-8]                                   ; arg1 = parent (the dialog's main vertical box)
-    mov  rsi, [rbp-32]                                    ; arg2 = the finished row
-    CCALL gtk_box_append                                     ; the row itself gets appended to the dialog's content
-
-    leave
+    mov  rdi, rsi          ; arg1 = the widget to focus = this handler's own incoming user_data ("map"'s 2nd argument)
+    CCALL gtk_widget_grab_focus
+    pop  rbp
     ret
 
 ; -------------------------------------------------------------------------
@@ -437,99 +448,285 @@ do_replace_all:
     ret
 
 ; =========================================================================
-; Find dialog
+; Loading finddlg.ui and wiring up all three dialogs
 ; =========================================================================
 
-; GtkWidget *ensure_find_dialog(void) -- builds g_find_dialog (and its
-; entry) the first time it's needed; a no-op on every later call.
-ensure_find_dialog:
+; void ensure_finddlg_loaded(void) -- loads finddlg.ui (once), fetches
+; every widget all three dialogs need, and wires every signal not already
+; expressed as a static XML property. A no-op on every later call.
+ensure_finddlg_loaded:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 32                  ; [rbp-8]=the dialog window [rbp-16]=its main vertical box [rbp-24]=the button row [rbp-32]=scratch for whichever button we're currently creating
+    sub  rsp, 32                  ; [rbp-16] = the GtkBuilder* -- deliberately never unreffed, see g_finddlg_builder's own comment  [rbp-24] = scratch: whichever GtkEventControllerKey we're currently attaching (see the KP_Enter handling below)
     mov  rax, [rel g_find_dialog]
     test rax, rax
     jz   .build                    ; not built yet -- fall through
     leave                            ; already built -- nothing to do
     ret
 .build:
-    lea  rdi, [rel title_find]        ; arg = "Find"
-    ICALL new_dialog                    ; builds the shared dialog shell (see new_dialog above)
-    mov  [rbp-8], rax
-    mov  [rel g_find_dialog], rax        ; cache it globally -- this is what makes every later call a no-op
-
-    mov  edi, GTK_ORIENTATION_VERTICAL
-    mov  esi, 8                            ; spacing between rows
-    CCALL gtk_box_new                        ; the dialog's main content box
+    lea  rdi, [rel finddlg_ui_resource_path]
+    CCALL gtk_builder_new_from_resource  ; GtkBuilder *gtk_builder_new_from_resource(const gchar *resource_path)
     mov  [rbp-16], rax
-    mov  rdi, [rbp-16]
-    ICALL apply_dialog_box_margins             ; 10px padding on all sides so content doesn't touch the window edge
+    mov  [rel g_finddlg_builder], rax
 
-    CCALL gtk_entry_new                          ; the "Find what:" text entry
+    ; --- Find dialog ------------------------------------------------------
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_find_dialog]
+    CCALL gtk_builder_get_object  ; GObject *gtk_builder_get_object(GtkBuilder*, const gchar *name)
+    mov  [rel g_find_dialog], rax
+    mov  rdi, [rel g_find_dialog]
+    ICALL setup_dialog_shell      ; transient-for/modal/close-request
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_find_entry]
+    CCALL gtk_builder_get_object
     mov  [rel g_find_entry], rax
 
-    mov  rdi, [rbp-16]                             ; parent = the content box
-    lea  rsi, [rel lbl_find_what]                    ; label = "Find what:"
-    mov  rdx, [rel g_find_entry]                       ; entry = the one just created
-    ICALL append_label_entry_row                          ; builds and appends the "Find what: [___]" row
+    ; grab focus onto the entry once the dialog is actually mapped (see
+    ; on_dialog_map_grab_focus for why this is more reliable than only
+    ; grabbing it right after gtk_window_present, which on_find_activate
+    ; still also does)
+    mov  rdi, [rel g_find_dialog]           ; arg1 = instance = the dialog
+    lea  rsi, [rel sig_map]                   ; arg2 = "map"
+    lea  rdx, [rel on_dialog_map_grab_focus]    ; arg3 = callback
+    mov  rcx, [rel g_find_entry]                  ; arg4 = user_data = the widget to focus once mapped
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
 
-    ; pressing Enter in the entry should act like clicking Find Next
+    ; pressing Enter in the entry is a one-shot "find and close" (see
+    ; on_find_entry_activate) -- unlike clicking Find Next (on_find_dialog_go
+    ; below), which leaves the dialog open for repeated use
     mov  rdi, [rel g_find_entry]                             ; arg1 = instance = the entry
-    lea  rsi, [rel sig_activate]                               ; arg2 = "activate" (GtkEntry's Enter-pressed signal)
-    lea  rdx, [rel on_find_dialog_go]                            ; arg3 = callback
+    lea  rsi, [rel sig_activate]                               ; arg2 = "activate" (Return/ISO_Enter -- GtkText's own keybinding)
+    lea  rdx, [rel on_find_entry_activate]                       ; arg3 = callback
     xor  ecx, ecx                                                  ; arg4 = user_data = NULL
     xor  r8, r8                                                     ; arg5 = destroy_data = NULL
     mov  r9d, G_CONNECT_DEFAULT
     CCALL g_signal_connect_data
 
-    ; the button row: Find Next, Cancel
-    mov  edi, GTK_ORIENTATION_HORIZONTAL
-    mov  esi, 8
-    CCALL gtk_box_new
-    mov  [rbp-24], rax
+    ; catch Return/ISO_Enter/KP_Enter ourselves in the CAPTURE phase (i.e.
+    ; before GtkText's own internal Return handling, which runs in its
+    ; default TARGET phase) rather than relying on the "activate" signal
+    ; -- see on_find_entry_key_pressed for why
+    CCALL gtk_event_controller_key_new  ; GtkEventController *gtk_event_controller_key_new(void)
+    mov  [rbp-24], rax                  ; stash across the next three calls
 
-    lea  rdi, [rel lbl_find_next_btn]         ; "_Find Next"
-    CCALL gtk_button_new_with_mnemonic           ; GtkWidget *gtk_button_new_with_mnemonic(const char*) -- the leading "_" becomes an Alt-accessible mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]                             ; arg1 = instance = the button
-    lea  rsi, [rel sig_clicked]                      ; arg2 = "clicked"
-    lea  rdx, [rel on_find_dialog_go]                  ; arg3 = callback (same handler the Enter key uses above)
-    xor  ecx, ecx                                        ; arg4 = user_data = NULL
-    xor  r8, r8                                           ; arg5 = destroy_data = NULL
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]                                      ; arg1 = the button row
-    mov  rsi, [rbp-32]                                        ; arg2 = the Find Next button
-    CCALL gtk_box_append
+    mov  rdi, [rbp-24]
+    mov  esi, GTK_PHASE_CAPTURE
+    CCALL gtk_event_controller_set_propagation_phase  ; void gtk_event_controller_set_propagation_phase(GtkEventController*, GtkPropagationPhase)
 
-    lea  rdi, [rel lbl_cancel_btn]              ; "_Cancel"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]                             ; arg1 = instance = the Cancel button
-    lea  rsi, [rel sig_clicked]                      ; arg2 = "clicked"
-    lea  rdx, [rel on_dialog_cancel_clicked]           ; arg3 = the SHARED cancel handler (see its own comment above)
-    mov  rcx, [rbp-8]                                    ; arg4 = user_data = the dialog itself -- this is what tells the shared handler WHICH dialog to hide
+    mov  rdi, [rel g_find_entry]  ; arg1 = widget
+    mov  rsi, [rbp-24]              ; arg2 = controller
+    CCALL gtk_widget_add_controller   ; void gtk_widget_add_controller(GtkWidget*, GtkEventController*) -- widget takes ownership of the controller
+
+    mov  rdi, [rbp-24]                          ; arg1 = instance = the controller
+    lea  rsi, [rel sig_key_pressed]               ; arg2 = "key-pressed"
+    lea  rdx, [rel on_find_entry_key_pressed]       ; arg3 = callback
+    xor  ecx, ecx
     xor  r8, r8
     mov  r9d, G_CONNECT_DEFAULT
     CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]                                       ; arg1 = the button row
-    mov  rsi, [rbp-32]                                         ; arg2 = the Cancel button
-    CCALL gtk_box_append
 
-    mov  rdi, [rbp-16]                    ; arg1 = the content box
-    mov  rsi, [rbp-24]                      ; arg2 = the finished button row
-    CCALL gtk_box_append                       ; button row goes after the "Find what:" row
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_find_next_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax                                             ; arg1 = instance = the button (still in rax)
+    lea  rsi, [rel sig_clicked]                                  ; arg2 = "clicked"
+    lea  rdx, [rel on_find_dialog_go]                              ; arg3 = callback -- on_find_entry_activate above reuses this same "sync text + search" core, then additionally closes the dialog on a match
+    xor  ecx, ecx                                                    ; arg4 = user_data = NULL
+    xor  r8, r8                                                       ; arg5 = destroy_data = NULL
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
 
-    mov  rdi, [rbp-8]                            ; arg1 = the dialog window
-    mov  rsi, [rbp-16]                             ; arg2 = the finished content box
-    CCALL gtk_window_set_child                        ; attaches the whole layout to the window
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_find_cancel_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax                                              ; arg1 = instance = the Cancel button
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_dialog_cancel_clicked]                       ; the SHARED cancel handler (see its own comment above)
+    mov  rcx, [rel g_find_dialog]                                    ; arg4 = user_data = the dialog itself -- tells the shared handler WHICH dialog to hide
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    ; --- Replace dialog -----------------------------------------------------
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_dialog]
+    CCALL gtk_builder_get_object
+    mov  [rel g_replace_dialog], rax
+    mov  rdi, [rel g_replace_dialog]
+    ICALL setup_dialog_shell
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_find_entry]
+    CCALL gtk_builder_get_object
+    mov  [rel g_replace_find_entry], rax
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_with_entry]
+    CCALL gtk_builder_get_object
+    mov  [rel g_replace_with_entry], rax
+
+    ; grab focus onto the "Find what:" entry once the dialog is actually
+    ; mapped -- see on_dialog_map_grab_focus
+    mov  rdi, [rel g_replace_dialog]
+    lea  rsi, [rel sig_map]
+    lea  rdx, [rel on_dialog_map_grab_focus]
+    mov  rcx, [rel g_replace_find_entry]
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    ; pressing Enter in the "Find what:" entry acts like Find Next
+    mov  rdi, [rel g_replace_find_entry]
+    lea  rsi, [rel sig_activate]
+    lea  rdx, [rel on_replace_dialog_find_next]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_find_next_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_replace_dialog_find_next]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_replace_dialog_replace]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_all_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_replace_dialog_replace_all]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_replace_cancel_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax                                              ; arg1 = instance = the Cancel button
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_dialog_cancel_clicked]                       ; the shared cancel handler
+    mov  rcx, [rel g_replace_dialog]                                 ; user_data = this dialog
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    ; --- Go To Line dialog --------------------------------------------------
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_goto_dialog]
+    CCALL gtk_builder_get_object
+    mov  [rel g_goto_dialog], rax
+    mov  rdi, [rel g_goto_dialog]
+    ICALL setup_dialog_shell
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_goto_spin]
+    CCALL gtk_builder_get_object
+    mov  [rel g_goto_spin], rax
+
+    ; grab focus onto the spin button once the dialog is actually mapped
+    ; -- see on_dialog_map_grab_focus for why this is what actually fixes
+    ; the "sometimes needs a second Enter press" symptom (the grab_focus
+    ; call in on_goto_activate, right after gtk_window_present, can
+    ; silently no-op if the surface isn't mapped yet at that exact point)
+    mov  rdi, [rel g_goto_dialog]
+    lea  rsi, [rel sig_map]
+    lea  rdx, [rel on_dialog_map_grab_focus]
+    mov  rcx, [rel g_goto_spin]
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    ; pressing Enter in the spin button acts like clicking OK
+    mov  rdi, [rel g_goto_spin]
+    lea  rsi, [rel sig_activate]
+    lea  rdx, [rel on_goto_ok]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    ; catch Return/ISO_Enter/KP_Enter ourselves in the CAPTURE phase (i.e.
+    ; before GtkSpinButton's own internal Return handling, which runs in
+    ; its default TARGET phase) rather than relying on the "activate"
+    ; signal -- see on_goto_spin_key_pressed for why
+    CCALL gtk_event_controller_key_new
+    mov  [rbp-24], rax
+
+    mov  rdi, [rbp-24]
+    mov  esi, GTK_PHASE_CAPTURE
+    CCALL gtk_event_controller_set_propagation_phase
+
+    mov  rdi, [rel g_goto_spin]
+    mov  rsi, [rbp-24]
+    CCALL gtk_widget_add_controller
+
+    mov  rdi, [rbp-24]
+    lea  rsi, [rel sig_key_pressed]
+    lea  rdx, [rel on_goto_spin_key_pressed]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_goto_ok_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_goto_ok]
+    xor  ecx, ecx
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
+
+    mov  rdi, [rbp-16]
+    lea  rsi, [rel id_goto_cancel_btn]
+    CCALL gtk_builder_get_object
+    mov  rdi, rax                                              ; arg1 = instance = the Cancel button
+    lea  rsi, [rel sig_clicked]
+    lea  rdx, [rel on_dialog_cancel_clicked]                       ; the shared cancel handler
+    mov  rcx, [rel g_goto_dialog]                                    ; user_data = this dialog
+    xor  r8, r8
+    mov  r9d, G_CONNECT_DEFAULT
+    CCALL g_signal_connect_data
 
     leave
     ret
 
-; void on_find_dialog_go(GtkWidget *widget, gpointer user_data)
-; Shared by the Find entry's "activate" (Enter key) and the Find Next
-; button's "clicked" -- both mean the same thing: take whatever's
-; currently in the entry as the new search term, then search.
+; =========================================================================
+; Find dialog
+; =========================================================================
+
+; gboolean on_find_dialog_go(GtkWidget *widget, gpointer user_data)
+; The Find Next button's "clicked" handler: takes whatever's currently in
+; the entry as the new search term, searches, and leaves the dialog open
+; either way (unlike on_find_entry_activate below) so Find Next can be
+; clicked repeatedly. Also reused directly by on_find_entry_activate as
+; the shared "sync text + search" core -- ICALL leaves find_next's
+; TRUE/FALSE return sitting in eax undisturbed (nothing after it touches
+; eax before `pop rbp; ret`), so callers that care can read it too, even
+; though this is wired up as a void GTK signal handler.
 on_find_dialog_go:
     push rbp
     mov  rbp, rsp
@@ -542,7 +739,60 @@ on_find_dialog_go:
     lea  rdi, [rel g_find_text]            ; dest = the persistent remembered-search-term buffer
     mov  rdx, FIND_TEXT_SIZE
     ICALL strcopy_bounded                     ; copies the entry's current text into g_find_text
-    ICALL find_next                              ; and search for it
+    ICALL find_next                              ; and search for it -- TRUE/FALSE result left in eax, see the comment above
+    pop  rbp
+    ret
+
+; void on_find_entry_activate(GtkWidget *widget, gpointer user_data)
+; The Find entry's "activate" (Enter key) handler: unlike the Find Next
+; button (on_find_dialog_go above), pressing Enter after typing a search
+; term is meant to be a complete one-shot action -- find it AND close the
+; dialog, returning focus to the document, so a search never needs the
+; mouse. Only closes on an actual match; if nothing was found, the dialog
+; is left open so the term can be corrected (same reasoning as
+; on_goto_ok/on_dialog_cancel_clicked's grab_focus -- hiding a window
+; doesn't hand keyboard focus back on its own).
+on_find_entry_activate:
+    push rbp
+    mov  rbp, rsp
+    ICALL on_find_dialog_go  ; syncs the entry's text into g_find_text and searches; rax = find_next's TRUE/FALSE
+    test eax, eax
+    jz   .not_found
+
+    mov  rdi, [rel g_find_dialog]
+    mov  esi, FALSE
+    CCALL gtk_widget_set_visible
+    mov  rdi, [rel g_textview]
+    CCALL gtk_widget_grab_focus
+
+.not_found:
+    pop  rbp
+    ret
+
+; gboolean on_find_entry_key_pressed(GtkEventControllerKey *controller,
+;   guint keyval, guint keycode, GdkModifierType state, gpointer user_data)
+; Catches Return/ISO_Enter/KP_Enter directly (in the CAPTURE phase, see
+; where this controller is attached) and triggers on_find_entry_activate
+; ourselves, rather than relying on GtkText's own "activate" signal --
+; same reasoning as on_goto_spin_key_pressed: GtkText's internal Return
+; handling doesn't reliably emit its own public "activate" on the very
+; first press, so handling (and consuming) the raw key directly is what
+; makes a single Enter press actually work every time.
+on_find_entry_key_pressed:
+    push rbp
+    mov  rbp, rsp
+    cmp  esi, GDK_KEY_Return      ; esi = keyval (this handler's own incoming arg2)
+    je   .ours
+    cmp  esi, GDK_KEY_ISO_Enter
+    je   .ours
+    cmp  esi, GDK_KEY_KP_Enter
+    je   .ours
+    xor  eax, eax                   ; not one of ours -- let GTK handle it normally
+    jmp  .ret
+.ours:
+    ICALL on_find_entry_activate  ; rdi/rsi/rdx/rcx/r8 are this handler's own incoming args, all unused by on_find_entry_activate
+    mov  eax, TRUE                  ; handled -- stop this key event from propagating further
+.ret:
     pop  rbp
     ret
 
@@ -552,7 +802,7 @@ on_find_dialog_go:
 on_find_activate:
     push rbp
     mov  rbp, rsp
-    ICALL ensure_find_dialog          ; build the dialog if this is the first time
+    ICALL ensure_finddlg_loaded          ; build the dialogs if this is the first time
 
     mov  rdi, [rel g_find_entry]        ; arg1 = the entry
     lea  rsi, [rel g_find_text]           ; arg2 = the remembered search term (possibly empty)
@@ -589,127 +839,6 @@ on_find_next_activate:
 ; =========================================================================
 ; Replace dialog
 ; =========================================================================
-
-; GtkWidget *ensure_replace_dialog(void) -- same lazy-build-once pattern
-; as ensure_find_dialog, with two entries (Find what / Replace with) and
-; four buttons (Find Next / Replace / Replace All / Cancel) instead of one entry and two buttons.
-ensure_replace_dialog:
-    push rbp
-    mov  rbp, rsp
-    sub  rsp, 32                  ; [rbp-8]=dialog [rbp-16]=content box [rbp-24]=button row [rbp-32]=scratch for whichever button we're building
-    mov  rax, [rel g_replace_dialog]
-    test rax, rax
-    jz   .build
-    leave
-    ret
-.build:
-    lea  rdi, [rel title_replace]
-    ICALL new_dialog
-    mov  [rbp-8], rax
-    mov  [rel g_replace_dialog], rax
-
-    mov  edi, GTK_ORIENTATION_VERTICAL
-    mov  esi, 8
-    CCALL gtk_box_new
-    mov  [rbp-16], rax
-    mov  rdi, [rbp-16]
-    ICALL apply_dialog_box_margins
-
-    CCALL gtk_entry_new                       ; "Find what:" entry
-    mov  [rel g_replace_find_entry], rax
-    mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_find_what]
-    mov  rdx, [rel g_replace_find_entry]
-    ICALL append_label_entry_row
-
-    CCALL gtk_entry_new                        ; "Replace with:" entry
-    mov  [rel g_replace_with_entry], rax
-    mov  rdi, [rbp-16]
-    lea  rsi, [rel lbl_replace_with]
-    mov  rdx, [rel g_replace_with_entry]
-    ICALL append_label_entry_row
-
-    ; pressing Enter in the "Find what:" entry acts like Find Next
-    mov  rdi, [rel g_replace_find_entry]
-    lea  rsi, [rel sig_activate]
-    lea  rdx, [rel on_replace_dialog_find_next]
-    xor  ecx, ecx
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-
-    ; the button row: Find Next, Replace, Replace All, Cancel
-    mov  edi, GTK_ORIENTATION_HORIZONTAL
-    mov  esi, 8
-    CCALL gtk_box_new
-    mov  [rbp-24], rax
-
-    lea  rdi, [rel lbl_find_next_btn]           ; "_Find Next"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]
-    lea  rsi, [rel sig_clicked]
-    lea  rdx, [rel on_replace_dialog_find_next]
-    xor  ecx, ecx
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]
-    mov  rsi, [rbp-32]
-    CCALL gtk_box_append
-
-    lea  rdi, [rel lbl_replace_btn]              ; "_Replace"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]
-    lea  rsi, [rel sig_clicked]
-    lea  rdx, [rel on_replace_dialog_replace]
-    xor  ecx, ecx
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]
-    mov  rsi, [rbp-32]
-    CCALL gtk_box_append
-
-    lea  rdi, [rel lbl_replace_all_btn]           ; "Replace _All"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]
-    lea  rsi, [rel sig_clicked]
-    lea  rdx, [rel on_replace_dialog_replace_all]
-    xor  ecx, ecx
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]
-    mov  rsi, [rbp-32]
-    CCALL gtk_box_append
-
-    lea  rdi, [rel lbl_cancel_btn]                 ; "_Cancel"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]
-    lea  rsi, [rel sig_clicked]
-    lea  rdx, [rel on_dialog_cancel_clicked]          ; the shared cancel handler
-    mov  rcx, [rbp-8]                                    ; user_data = this dialog
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]
-    mov  rsi, [rbp-32]
-    CCALL gtk_box_append
-
-    mov  rdi, [rbp-16]                    ; arg1 = content box
-    mov  rsi, [rbp-24]                      ; arg2 = the finished button row
-    CCALL gtk_box_append
-
-    mov  rdi, [rbp-8]                            ; arg1 = the dialog window
-    mov  rsi, [rbp-16]                             ; arg2 = the finished content box
-    CCALL gtk_window_set_child
-
-    leave
-    ret
 
 ; void on_replace_dialog_sync_texts(void) -- copies both entry widgets'
 ; text into g_find_text / g_replace_text. Called before every Replace
@@ -774,7 +903,7 @@ on_replace_dialog_replace_all:
 on_replace_activate:
     push rbp
     mov  rbp, rsp
-    ICALL ensure_replace_dialog
+    ICALL ensure_finddlg_loaded
 
     mov  rdi, [rel g_replace_find_entry]
     lea  rsi, [rel g_find_text]
@@ -793,97 +922,37 @@ on_replace_activate:
 ; Go To Line dialog
 ; =========================================================================
 
-; GtkWidget *ensure_goto_dialog(void) -- same lazy-build-once pattern,
-; with a GtkSpinButton (a numeric entry with up/down steppers) instead of
-; a plain text entry, and OK/Cancel buttons instead of Find Next/Cancel.
-ensure_goto_dialog:
+; gboolean on_goto_spin_key_pressed(GtkEventControllerKey *controller,
+;   guint keyval, guint keycode, GdkModifierType state, gpointer user_data)
+; Catches Return/ISO_Enter/KP_Enter directly and triggers on_goto_ok
+; ourselves, rather than relying on GtkSpinButton's own "activate" signal
+; -- confirmed by hand (typing a value then pressing Return once left the
+; dialog open; the value was correctly parsed, but nothing else happened
+; until a SECOND Return): GtkSpinButton's internal Return handling
+; commits/reformats the typed text on the first press without also
+; emitting its own public "activate" that same press, only doing so on a
+; second press where the text no longer changes. Handling the raw key
+; ourselves (and consuming it, so that internal double-step never gets a
+; chance to run at all) makes any of the three Enter variants work in a
+; single press. gtk_spin_button_update() is still called (inside
+; on_goto_ok) before reading the value, since we're now bypassing
+; whatever commit step "activate" would have implied.
+on_goto_spin_key_pressed:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 32                  ; [rbp-8]=dialog [rbp-16]=content box [rbp-24]=button row [rbp-32]=scratch for whichever button we're building
-    mov  rax, [rel g_goto_dialog]
-    test rax, rax
-    jz   .build
-    leave
-    ret
-.build:
-    lea  rdi, [rel title_goto]
-    ICALL new_dialog
-    mov  [rbp-8], rax
-    mov  [rel g_goto_dialog], rax
-
-    mov  edi, GTK_ORIENTATION_VERTICAL
-    mov  esi, 8
-    CCALL gtk_box_new
-    mov  [rbp-16], rax
-    mov  rdi, [rbp-16]
-    ICALL apply_dialog_box_margins
-
-    ; gtk_spin_button_new_with_range(min, max, step) takes three DOUBLES
-    ; -- all three go in XMM0/XMM1/XMM2 per the SysV ABI's float-argument
-    ; sequence, with NO integer-register arguments at all for this call.
-    movsd xmm0, [rel dq_one]          ; arg1 = min = 1.0 (line numbers are 1-based)
-    movsd xmm1, [rel dq_million]      ; arg2 = max = 1,000,000.0 (a generous ceiling, not tied to the actual document length)
-    movsd xmm2, [rel dq_one]          ; arg3 = step = 1.0 (the up/down steppers move by whole lines)
-    CCALL gtk_spin_button_new_with_range   ; GtkWidget *gtk_spin_button_new_with_range(double min, double max, double step)
-    mov  [rel g_goto_spin], rax
-
-    mov  rdi, [rbp-16]                       ; arg1 = content box
-    lea  rsi, [rel lbl_line_number]            ; arg2 = "Line number:"
-    mov  rdx, [rel g_goto_spin]                  ; arg3 = the spin button just created
-    ICALL append_label_entry_row                    ; builds and appends the "Line number: [__]" row (the helper works fine with a GtkSpinButton in the "entry" slot -- both are just GtkWidget*)
-
-    ; pressing Enter in the spin button acts like clicking OK
-    mov  rdi, [rel g_goto_spin]
-    lea  rsi, [rel sig_activate]
-    lea  rdx, [rel on_goto_ok]
-    xor  ecx, ecx
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-
-    ; the button row: OK, Cancel
-    mov  edi, GTK_ORIENTATION_HORIZONTAL
-    mov  esi, 8
-    CCALL gtk_box_new
-    mov  [rbp-24], rax
-
-    lea  rdi, [rel lbl_ok_btn]              ; "_OK"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]
-    lea  rsi, [rel sig_clicked]
-    lea  rdx, [rel on_goto_ok]
-    xor  ecx, ecx
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]
-    mov  rsi, [rbp-32]
-    CCALL gtk_box_append
-
-    lea  rdi, [rel lbl_cancel_btn]           ; "_Cancel"
-    CCALL gtk_button_new_with_mnemonic
-    mov  [rbp-32], rax
-    mov  rdi, [rbp-32]
-    lea  rsi, [rel sig_clicked]
-    lea  rdx, [rel on_dialog_cancel_clicked]    ; the shared cancel handler
-    mov  rcx, [rbp-8]                              ; user_data = this dialog
-    xor  r8, r8
-    mov  r9d, G_CONNECT_DEFAULT
-    CCALL g_signal_connect_data
-    mov  rdi, [rbp-24]
-    mov  rsi, [rbp-32]
-    CCALL gtk_box_append
-
-    mov  rdi, [rbp-16]                    ; arg1 = content box
-    mov  rsi, [rbp-24]                      ; arg2 = the finished button row
-    CCALL gtk_box_append
-
-    mov  rdi, [rbp-8]                            ; arg1 = the dialog window
-    mov  rsi, [rbp-16]                             ; arg2 = the finished content box
-    CCALL gtk_window_set_child
-
-    leave
+    cmp  esi, GDK_KEY_Return      ; esi = keyval (this handler's own incoming arg2)
+    je   .ours
+    cmp  esi, GDK_KEY_ISO_Enter
+    je   .ours
+    cmp  esi, GDK_KEY_KP_Enter
+    je   .ours
+    xor  eax, eax                   ; not one of ours -- let GTK handle it normally
+    jmp  .ret
+.ours:
+    ICALL on_goto_ok  ; rdi/rsi/rdx/rcx/r8 are this handler's own incoming args, all unused by on_goto_ok
+    mov  eax, TRUE      ; handled -- stop this key event from propagating further (in particular, from ever reaching GtkSpinButton's own internal Return handling)
+.ret:
+    pop  rbp
     ret
 
 ; void on_goto_ok(GtkWidget *widget, gpointer user_data)
@@ -894,6 +963,15 @@ on_goto_ok:
     push rbp
     mov  rbp, rsp
     sub  rsp, 96                  ; [rbp-96..-17] = a GtkTextIter (80 bytes)
+
+    ; force the spin button to parse/clamp whatever's currently typed into
+    ; its adjustment before reading it below -- belt-and-suspenders
+    ; against GtkSpinButton's own well-known quirk where a just-typed
+    ; value isn't necessarily reflected in get_value_as_int() until this
+    ; has happened (normally implicit on focus-out or its own internal
+    ; activate handling, but cheap and harmless to force explicitly here)
+    mov  rdi, [rel g_goto_spin]
+    CCALL gtk_spin_button_update  ; void gtk_spin_button_update(GtkSpinButton*)
 
     ; --- read the requested line number, clamped to a valid (0-based) index ---
     mov  rdi, [rel g_goto_spin]
@@ -924,10 +1002,15 @@ on_goto_ok:
     pxor xmm2, xmm2                                    ; yalign = 0.0 (unused)
     CCALL gtk_text_view_scroll_to_iter
 
-    ; --- close the dialog -----------------------------------------------
+    ; --- close the dialog, and return keyboard focus to the buffer --------
+    ; (hiding a window doesn't hand focus back on its own -- see
+    ; on_dialog_close_request's comment for why this is needed explicitly)
     mov  rdi, [rel g_goto_dialog]
     mov  esi, FALSE
     CCALL gtk_widget_set_visible
+
+    mov  rdi, [rel g_textview]
+    CCALL gtk_widget_grab_focus
 
     leave
     ret
@@ -941,7 +1024,7 @@ on_goto_activate:
     mov  rbp, rsp
     sub  rsp, 96                  ; [rbp-96..-17] = a GtkTextIter (80 bytes)
 
-    ICALL ensure_goto_dialog          ; build the dialog if this is the first time
+    ICALL ensure_finddlg_loaded          ; build the dialogs if this is the first time
 
     ; --- find the cursor's current line ------------------------------------
     mov  rdi, [rel g_buffer]
