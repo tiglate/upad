@@ -161,7 +161,15 @@ LINE_NUMBER_GUTTER_PADDING  equ 16  ; total horizontal padding (both sides) adde
 
 ; ---- encoding.asm: which charset a document was decoded from (our own
 ;      internal enum, not header-sourced -- same status as PENDING_* above) --
+; DOC_ENCODING_OTHER covers every non-UTF-16, non-UTF-8 case: the iconv
+; codeset name itself (whatever uchardet detected, or "WINDOWS-1252" as
+; the last-resort fallback if it couldn't) is stored separately, in
+; g_doc_charset_name, since a plain enum can't name an arbitrary charset.
 DOC_ENCODING_UTF8          equ 0
-DOC_ENCODING_WINDOWS_1252  equ 1
+DOC_ENCODING_OTHER         equ 1
 DOC_ENCODING_UTF16LE       equ 2
 DOC_ENCODING_UTF16BE       equ 3
+
+; iconv/GLib codeset names are short ("WINDOWS-1252", "SHIFT_JIS",
+; "ISO-8859-15", ...) -- comfortably bounded well under this.
+CHARSET_NAME_SIZE          equ 32

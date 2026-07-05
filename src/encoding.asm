@@ -10,22 +10,30 @@
 ; GtkTextBuffer requires UTF-8 (gtk_text_buffer_set_text asserts on
 ; anything else, silently doing nothing on a validation failure -- no
 ; crash, no GError, no signal, just an empty buffer -- which used to be
-; this program's entire behavior on a non-UTF-8 file). Two source
-; encodings are recognized, tracked in g_doc_source_encoding:
+; this program's entire behavior on a non-UTF-8 file). Source encodings
+; are recognized in this order, tracked in g_doc_source_encoding:
 ;
 ;   - UTF-16 (LE or BE): detected by its 2-byte byte-order mark (FF FE or
 ;     FE FF) -- a real, unambiguous signal, unlike guessing an 8-bit
 ;     charset. This is exactly what Windows Notepad's own "Unicode" save
 ;     option produces, so it's a common thing to actually run into.
-;   - Windows-1252: the fallback assumed whenever the bytes are neither a
-;     recognized UTF-16 BOM nor valid UTF-8. Real charset auto-detection
-;     (distinguishing Windows-1252 from Latin-1, Shift-JIS, KOI8-R, ...)
-;     is a much bigger undertaking than this handles; Windows-1252 is a
-;     safe default since it's a strict superset of Latin-1/ISO-8859-1 for
-;     every printable character, and is what the overwhelming majority of
-;     "old Windows/DOS 8-bit text file" turns out to actually be in
-;     practice (also what web browsers default to for undeclared legacy
-;     8-bit text). See CLAUDE.md's Known limitations.
+;   - Anything else that isn't valid UTF-8: handed to uchardet (a small
+;     statistical charset sniffer, the same one Firefox/LibreOffice use)
+;     for a guess, which is then fed straight to g_convert as its
+;     from_codeset -- uchardet's whole design goal is returning
+;     iconv-compatible names, so no translation table of our own is
+;     needed between the two. The guessed name is remembered in
+;     g_doc_charset_name (DOC_ENCODING_OTHER), not just a fixed enum
+;     value, since it could be any charset iconv knows about. If
+;     uchardet has no confident verdict at all (returns ""), or its
+;     guess doesn't actually decode, Windows-1252 is the last-resort
+;     fallback -- a safe default since it's a strict superset of
+;     Latin-1/ISO-8859-1 for every printable character, and is what the
+;     overwhelming majority of "old Windows/DOS 8-bit text file" turns
+;     out to actually be in practice (also what web browsers default to
+;     for undeclared legacy 8-bit text). See CLAUDE.md's Known
+;     limitations for what's still not handled (UTF-32, and a build
+;     without uchardet-detectable confidence on short/ambiguous files).
 ;
 ; The two entry points fileio.asm calls:
 ;   decode_and_load_into_buffer(raw, raw_len) -- on Open/command-line load
@@ -44,14 +52,19 @@
 ; never uses strlen() on a converted result, only g_convert's own
 ; bytes_written out-param. UTF-16 text is full of embedded 0x00 bytes --
 ; every Basic Latin character's high byte is zero -- so strlen() would
-; silently truncate at the first one. Windows-1252 output could in theory
+; silently truncate at the first one. Legacy 8-bit output could in theory
 ; contain a genuine embedded NUL too (rare, but possible), so the same
 ; discipline applies there for consistency even though it isn't the
 ; common case that would actually hit it.
+;
+; uchardet_t (opaque, from libuchardet) is a plain C handle, not a
+; GObject -- built/torn down with uchardet_new/uchardet_delete, not
+; g_object_new/g_object_unref, and none of its calls go through CCALL's
+; PLT convention any differently than GTK/GLib's own C ABI calls do.
 
-%include "consts.inc"          ; TRUE/FALSE, DOC_ENCODING_*, ADW_RESPONSE_DESTRUCTIVE (unused here, kept for consistency), G_CONNECT_DEFAULT (unused directly, adw_alert_dialog_choose doesn't need it)
+%include "consts.inc"          ; TRUE/FALSE, DOC_ENCODING_*, CHARSET_NAME_SIZE, ADW_RESPONSE_DESTRUCTIVE (unused here, kept for consistency), G_CONNECT_DEFAULT (unused directly, adw_alert_dialog_choose doesn't need it)
 %include "callconv.inc"        ; CCALL/ICALL macros; see its own comment for g_convert's 7th (stack) argument and the indirect-call pattern used below
-%include "extern.inc"          ; extern g_utf8_validate/g_convert/adw_alert_dialog_*/memcpy/g_free
+%include "extern.inc"          ; extern g_utf8_validate/g_convert/uchardet_*/adw_alert_dialog_*/memcpy/g_free/strcmp
 
 global reset_encoding_state         ; called from fileio.asm's on_new_activate, and internally by decode_and_load_into_buffer below
 global decode_and_load_into_buffer  ; called from fileio.asm's read_file_to_buffer
@@ -61,6 +74,7 @@ global ensure_encoding_resolved     ; called from fileio.asm (on_save_activate, 
 extern g_window                       ; main.asm -- parent for the encoding-choice dialog
 extern g_buffer                        ; main.asm -- decode_and_load_into_buffer's target
 extern report_error                     ; errdlg.asm -- shown if even the fallback encodings can't decode/encode
+extern strcopy_bounded                   ; fileio.asm -- bounded string copy, reused here to capture uchardet's answer and to seed the Windows-1252 fallback name
 
 section .rodata
     charset_utf8         db "UTF-8", 0
@@ -82,7 +96,7 @@ section .rodata
     lbl_utf8     db "_Convert to UTF-8", 0
 
     err_msg_decode    db "Could not open file", 0
-    err_detail_decode db "This file's contents don't look like valid UTF-8, UTF-16, or Windows-1252 text.", 0
+    err_detail_decode db "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be.", 0
     err_msg_encode    db "Could not save file", 0
     err_detail_encode db "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead.", 0
 
@@ -90,6 +104,7 @@ section .bss
     align 8
     g_doc_needs_encoding_choice resq 1  ; TRUE if this document was transcoded from a non-UTF-8 encoding on load and Save/Save As haven't asked (and gotten an answer) about it yet this session
     g_doc_source_encoding       resq 1  ; a DOC_ENCODING_* constant: what to transcode back to on save if the user chooses "keep" (DOC_ENCODING_UTF8 for a document that was always plain UTF-8 -- meaning "just write UTF-8", the same as choosing "convert" ever does)
+    g_doc_charset_name          resb CHARSET_NAME_SIZE  ; only meaningful when g_doc_source_encoding == DOC_ENCODING_OTHER -- the iconv codeset name uchardet detected (or "WINDOWS-1252", if it had no verdict or its guess didn't decode)
     g_encoding_continue_fn      resq 1  ; stashed across the async prompt below -- whatever the caller wanted to happen once the encoding is settled
 
 section .text
@@ -109,18 +124,20 @@ reset_encoding_state:
 ; void decode_and_load_into_buffer(const char *raw, gsize raw_len)
 ; Checks for a UTF-16 byte-order mark first (an unambiguous signal, unlike
 ; guessing an 8-bit charset); failing that, validates raw as UTF-8 and
-; loads it as-is if it already is (the common case); failing THAT,
-; assumes Windows-1252 (see file header for why that specific fallback).
-; Whichever non-UTF-8 path is taken, marks g_doc_needs_encoding_choice so
-; a later Save/Save As asks what to do about it. If even the relevant
-; fallback can't make sense of the bytes, reports an error the same way a
-; failed open()/read() would and leaves the buffer untouched.
+; loads it as-is if it already is (the common case); failing THAT, hands
+; the bytes to uchardet and tries whatever it guesses, falling back to
+; Windows-1252 if uchardet has no verdict or its guess doesn't actually
+; decode (see file header for the full fallback chain). Whichever
+; non-UTF-8 path is taken, marks g_doc_needs_encoding_choice so a later
+; Save/Save As asks what to do about it. If nothing above can make sense
+; of the bytes, reports an error the same way a failed open()/read()
+; would and leaves the buffer untouched.
 ; -------------------------------------------------------------------------
 decode_and_load_into_buffer:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 64
-    ; [rbp-8]=raw  [rbp-16]=raw_len  [rbp-24]=converted UTF-8 text (owned once set, must g_free)  [rbp-32]=its exact length (from bytes_written, NOT strlen -- see file header)  [rbp-40]=the from_codeset chosen by the BOM check below, only used on that path  [rbp-48]=bytes_written out-param scratch for g_convert
+    sub  rsp, 80
+    ; [rbp-8]=raw  [rbp-16]=raw_len  [rbp-24]=converted UTF-8 text (owned once set, must g_free)  [rbp-32]=its exact length (from bytes_written, NOT strlen -- see file header)  [rbp-40]=the from_codeset chosen by the BOM check below, only used on that path  [rbp-48]=bytes_written out-param scratch for g_convert  [rbp-56]=the uchardet_t handle, only used on the no-BOM/not-UTF-8 path
 
     mov  [rbp-8], rdi
     mov  [rbp-16], rsi
@@ -180,19 +197,79 @@ decode_and_load_into_buffer:
     test eax, eax
     jnz  .already_utf8
 
-    ; --- not valid UTF-8 either -- try Windows-1252 --------------------------
-    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_WINDOWS_1252
+    ; --- not valid UTF-8 either -- ask uchardet what it thinks this is --------
+    CCALL uchardet_new                    ; uchardet_t uchardet_new(void) -- rax = a new detector handle, ours to delete
+    mov  [rbp-56], rax
+
+    mov  rdi, [rbp-56]              ; arg1 = ud
+    mov  rsi, [rbp-8]                 ; arg2 = data = raw
+    mov  rdx, [rbp-16]                  ; arg3 = len = raw_len
+    CCALL uchardet_handle_data              ; int uchardet_handle_data(uchardet_t, const char*, size_t) -- return value not checked: an internal failure here just means uchardet_get_charset below comes back "" the same as "no verdict", handled identically either way
+
+    mov  rdi, [rbp-56]
+    CCALL uchardet_data_end                   ; void uchardet_data_end(uchardet_t) -- tells it there's no more data coming, so it commits to its best guess
+
+    mov  rdi, [rbp-56]
+    CCALL uchardet_get_charset                 ; const char *uchardet_get_charset(uchardet_t) -- borrowed pointer, valid only until uchardet_delete below (or "" -- not NULL -- if it never reached a verdict)
+    lea  rdi, [rel g_doc_charset_name]            ; copy it into OUR OWN buffer right now, while it's still valid -- uchardet_delete invalidates it
+    mov  rsi, rax
+    mov  rdx, CHARSET_NAME_SIZE
+    ICALL strcopy_bounded                            ; NUL-terminates; a zero-length ("") source copies cleanly to an empty g_doc_charset_name too
+
+    mov  rdi, [rbp-56]
+    CCALL uchardet_delete                        ; done with the detector now that its answer has been copied out
+
+    movzx eax, byte [rel g_doc_charset_name]  ; peek at the first byte -- "" (no verdict) means uchardet never became confident enough to name anything
+    test al, al
+    jnz  .try_detected_charset
+
+    ; --- no verdict at all -- go straight to the Windows-1252 fallback --------
+    lea  rdi, [rel charset_windows1252]
+    lea  rsi, [rel g_doc_charset_name]
+    mov  rdx, CHARSET_NAME_SIZE
+    ICALL strcopy_bounded
+
+.try_detected_charset:
+    mov  qword [rel g_doc_source_encoding], DOC_ENCODING_OTHER
     sub  rsp, 16
     mov  qword [rsp], 0                   ; arg7 = error = NULL
     mov  rdi, [rbp-8]                       ; arg1 = str
     mov  rsi, [rbp-16]                        ; arg2 = len
     lea  rdx, [rel charset_utf8]                ; arg3 = to_codeset = "UTF-8"
-    lea  rcx, [rel charset_windows1252]           ; arg4 = from_codeset = "WINDOWS-1252"
+    lea  rcx, [rel g_doc_charset_name]            ; arg4 = from_codeset -- uchardet's guess, or the Windows-1252 fallback set above
     xor  r8, r8                                     ; arg5 = bytes_read = NULL
     lea  r9, [rbp-48]                                 ; arg6 = &bytes_written
     CCALL g_convert
     add  rsp, 16
-    ; falls through to .have_conversion_result
+    test rax, rax
+    jnz  .have_conversion_result             ; success -- join the shared tail below
+
+    ; --- that guess didn't actually decode -- if it wasn't already Windows-1252, try that as the last resort ---
+    lea  rdi, [rel g_doc_charset_name]
+    lea  rsi, [rel charset_windows1252]
+    CCALL strcmp
+    test eax, eax
+    jnz  .try_windows1252_fallback   ; different name -- worth a second attempt
+    xor  eax, eax                     ; already was Windows-1252 -- no different fallback left; rax=NULL so .have_conversion_result reports .decode_failed
+    jmp  .have_conversion_result
+
+.try_windows1252_fallback:
+    lea  rdi, [rel charset_windows1252]
+    lea  rsi, [rel g_doc_charset_name]
+    mov  rdx, CHARSET_NAME_SIZE
+    ICALL strcopy_bounded
+
+    sub  rsp, 16
+    mov  qword [rsp], 0                   ; arg7 = error = NULL
+    mov  rdi, [rbp-8]
+    mov  rsi, [rbp-16]
+    lea  rdx, [rel charset_utf8]
+    lea  rcx, [rel g_doc_charset_name]        ; now "WINDOWS-1252"
+    xor  r8, r8
+    lea  r9, [rbp-48]
+    CCALL g_convert
+    add  rsp, 16
+    ; falls through to .have_conversion_result -- success or final failure both handled there
 
 .have_conversion_result:
     test rax, rax
@@ -233,25 +310,28 @@ decode_and_load_into_buffer:
 ; g_doc_source_encoding says the document's original encoding was:
 ; DOC_ENCODING_UTF8 (the common case: no ambiguity, or the user already
 ; chose to convert) just passes utf8_text/utf8_len straight through
-; unchanged. DOC_ENCODING_WINDOWS_1252/UTF16LE/UTF16BE convert instead
-; (the UTF-16 cases via convert_utf8_to_utf16_with_bom below, which also
-; restores the 2-byte BOM so the file round-trips byte-for-byte).
+; unchanged. DOC_ENCODING_OTHER/UTF16LE/UTF16BE convert instead (the
+; UTF-16 cases via convert_utf8_to_utf16_with_bom below, which also
+; restores the 2-byte BOM so the file round-trips byte-for-byte;
+; DOC_ENCODING_OTHER converts to whatever iconv codeset name is
+; currently in g_doc_charset_name -- uchardet's detected guess, or the
+; Windows-1252 fallback, whichever decode_and_load_into_buffer settled on).
 ;
 ; On success, *out_text/*out_len point at a buffer the CALLER now owns
 ; (must g_free exactly once) -- either utf8_text itself unchanged (the
 ; UTF-8 case) or a new buffer (any other case, with utf8_text already
 ; freed). Returns FALSE (utf8_text already freed, an error already
 ; reported) if a conversion was needed but failed -- e.g. a character
-; with no Windows-1252 representation, such as an emoji or CJK character
-; typed into a document that started out as a legacy Western-European
-; file. The caller should skip writing anything: there's nothing left to
-; write, and writing partial/wrong bytes would be worse than not writing
-; at all.
+; with no representation in that charset, such as an emoji or CJK
+; character typed into a document that started out as a legacy
+; Western-European file. The caller should skip writing anything:
+; there's nothing left to write, and writing partial/wrong bytes would
+; be worse than not writing at all.
 ; -------------------------------------------------------------------------
 encode_for_save:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 64                  ; [rbp-8]=utf8_text  [rbp-16]=utf8_len  [rbp-24]=out_text (the caller's out-param address)  [rbp-32]=out_len (ditto)  [rbp-40]=the g_convert result  [rbp-48]=bytes_written out-param scratch -- both only used on the Windows-1252 path
+    sub  rsp, 64                  ; [rbp-8]=utf8_text  [rbp-16]=utf8_len  [rbp-24]=out_text (the caller's out-param address)  [rbp-32]=out_len (ditto)  [rbp-40]=the g_convert result  [rbp-48]=bytes_written out-param scratch -- both only used on the DOC_ENCODING_OTHER path
 
     mov  [rbp-8], rdi
     mov  [rbp-16], rsi
@@ -259,8 +339,8 @@ encode_for_save:
     mov  [rbp-32], rcx
 
     mov  rax, [rel g_doc_source_encoding]
-    cmp  rax, DOC_ENCODING_WINDOWS_1252
-    je   .convert_windows1252
+    cmp  rax, DOC_ENCODING_OTHER
+    je   .convert_other
     cmp  rax, DOC_ENCODING_UTF16LE
     je   .convert_utf16le
     cmp  rax, DOC_ENCODING_UTF16BE
@@ -277,12 +357,12 @@ encode_for_save:
     leave
     ret
 
-.convert_windows1252:
+.convert_other:
     sub  rsp, 16                        ; g_convert's 7th (stack) argument + padding
     mov  qword [rsp], 0                   ; arg7 = error = NULL
     mov  rdi, [rbp-8]                       ; arg1 = str = utf8_text
     mov  rsi, [rbp-16]                        ; arg2 = len = utf8_len
-    lea  rdx, [rel charset_windows1252]         ; arg3 = to_codeset
+    lea  rdx, [rel g_doc_charset_name]          ; arg3 = to_codeset -- whatever decode_and_load_into_buffer settled on (uchardet's guess, or Windows-1252)
     lea  rcx, [rel charset_utf8]                  ; arg4 = from_codeset
     xor  r8, r8                                     ; arg5 = bytes_read = NULL
     lea  r9, [rbp-48]                                 ; arg6 = &bytes_written -- see file header for why not strlen()

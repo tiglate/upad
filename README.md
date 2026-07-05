@@ -51,9 +51,10 @@ Plus the details that make it feel like a real app, not a toy:
   open/read/write pops a real alert *and* logs it (journal/stderr) for
   later digging.
 - 🌍 **Opens legacy (non-UTF-8) text files** instead of silently loading
-  them as empty — auto-detects UTF-16 (LE/BE, byte-order mark) or falls
-  back to Windows-1252, and asks once, on Save, whether to keep that
-  original encoding or convert to UTF-8.
+  them as empty — auto-detects UTF-16 (LE/BE, byte-order mark), or asks
+  `uchardet` to identify the charset (Shift-JIS, KOI8-R, Windows-1252,
+  ...), and asks once, on Save, whether to keep that original encoding or
+  convert to UTF-8.
 - 🔢 **A line-numbers gutter, on by default** — the gutter width tracks
   the document's line count in real time (1 digit for a new file, growing
   as needed), at effectively zero cost regardless of file size: editing a
@@ -82,11 +83,13 @@ no code shared between the two.
 - **libadwaita development headers, 1.5+** (`libadwaita-1-dev`) — the
   Font/Find/Replace/Go To/Print dialogs and Help > About all lean on
   APIs introduced in GTK 4.10 and libadwaita 1.5
+- **uchardet development headers** (`libuchardet-dev`) — charset
+  detection when opening a non-UTF-8 file
 
 On Debian/Ubuntu/Zorin:
 
 ```bash
-sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev
+sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev
 ```
 
 ## 🔨 Build
@@ -100,7 +103,7 @@ make release  # clean rebuild, then strip debug info -> a leaner ./upad
 
 Each `src/*.asm` is assembled independently (`nasm -f elf64 -g -F dwarf`)
 into `build/*.o`, then linked in one step against
-`$(pkg-config --libs gtk4 libadwaita-1)`.
+`$(pkg-config --libs gtk4 libadwaita-1 uchardet)`.
 
 The default build keeps DWARF debug info (handy for `gdb`), which makes
 up a big chunk of the binary on disk even though it's never loaded into
@@ -114,8 +117,8 @@ packaging and the About dialog (via a small generated `build/version.inc`
 
 ### 🩹 Troubleshooting
 
-**`pkg-config could not find "gtk4 libadwaita-1"`** even though the -dev
-packages are installed: some setups don't have
+**`pkg-config could not find "gtk4 libadwaita-1 uchardet"`** even though
+the -dev packages are installed: some setups don't have
 `/usr/lib/<arch>/pkgconfig` in `PKG_CONFIG_PATH` by default. Find the
 `.pc` files and point at them:
 
@@ -170,7 +173,7 @@ crammed together:
 | `menu.asm` | The File/Edit/Format/View/Help `GMenu` model (with real section separators), wrapped in a `GtkPopoverMenuBar` |
 | `actions.asm` | Registers every `GAction` (`win.*` / `app.*`) and points it at its handler |
 | `fileio.asm` | New/Open/Save/Save As: `GtkFileDialog` for the picker, raw `open`/`read`/`write`/`close` for the bytes |
-| `encoding.asm` | 🌍 Transcodes non-UTF-8 files to UTF-8 on load via `g_convert` -- UTF-16 (LE/BE) detected by its byte-order mark, otherwise assumed Windows-1252; asks once, on Save/Save As, whether to keep the original encoding or convert to UTF-8 |
+| `encoding.asm` | 🌍 Transcodes non-UTF-8 files to UTF-8 on load via `g_convert` -- UTF-16 (LE/BE) detected by its byte-order mark, otherwise identified by `uchardet` (falling back to Windows-1252 as a last resort); asks once, on Save/Save As, whether to keep the original encoding or convert to UTF-8 |
 | `errdlg.asm` | 🚨 `report_error`/`report_file_error`: a `GtkAlertDialog` for the user, `g_log` (journal/stderr) for later examination |
 | `printing.asm` | 🖨️ File > Page Setup.../Print..., via `GtkPageSetup`/`GtkPrintSettings` and `GtkPrintOperation`'s begin-print/draw-page/end-print signals (Pango layout pagination + cairo drawing) |
 | `editops.asm` | Undo/Cut/Copy/Paste/Delete/Select All (GTK's own built-in text widget actions) + Time/Date |
@@ -226,15 +229,17 @@ re-verify with a two-line C program before trusting these constants.
 
 ## ⚠️ Known limitations
 
-- 🌍 **Encoding detection stops at UTF-16 and Windows-1252** — UTF-16
-  (LE/BE) is recognized via its byte-order mark; anything else that fails
-  UTF-8 validation is assumed to be Windows-1252, a deliberate
-  simplification (it's a strict superset of Latin-1 for every printable
-  character, and what most "old non-UTF-8 text file" turns out to be). A
-  file in some other legacy encoding (Shift-JIS, KOI8-R, ...) or UTF-32
-  will decode as garbage rather than correctly, though never crash or
-  silently stay empty. The Convert/Keep-original choice is also only
-  asked once per document per session.
+- 🌍 **Encoding detection is a statistical guess beyond UTF-16** — UTF-16
+  (LE/BE) is recognized via its unambiguous byte-order mark; anything
+  else that fails UTF-8 validation is handed to `uchardet` (the same
+  sniffer Firefox/LibreOffice use), falling back to Windows-1252 (a
+  strict superset of Latin-1 for every printable character, and what
+  most "old non-UTF-8 text file" turns out to be) if `uchardet` has no
+  verdict or its guess doesn't actually decode. A short or ambiguous
+  legacy file can still occasionally be misdetected, and UTF-32 isn't
+  handled at all — but it will never crash or silently stay empty. The
+  Convert/Keep-original choice is also only asked once per document per
+  session.
 - 🖋️ **Printing** always uses the last Format > Font... pick (or
   "Monospace 11" if none) for the whole document — there's no separate
   print-only font/size, and no header/footer/page-number support.

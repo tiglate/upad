@@ -13,8 +13,8 @@ Build / test / lint commands
 
 Notes:
 - There is no automated test suite. To validate a change, run `make` (incremental) then `./upad` or `make run` to exercise behavior manually.
-- Each `src/*.asm` is assembled with NASM into `build/*.o` and then linked via `gcc` against `$(pkg-config --libs gtk4 libadwaita-1)`.
-- If pkg-config cannot find GTK/libadwaita, locate the .pc files (e.g. `find /usr/lib -name 'gtk4.pc'`) and set `PKG_CONFIG_PATH` accordingly.
+- Each `src/*.asm` is assembled with NASM into `build/*.o` and then linked via `gcc` against `$(pkg-config --libs gtk4 libadwaita-1 uchardet)`.
+- If pkg-config cannot find GTK/libadwaita/uchardet, locate the .pc files (e.g. `find /usr/lib -name 'gtk4.pc'`) and set `PKG_CONFIG_PATH` accordingly.
 
 High-level architecture (big picture)
 - One assembly file per feature area. Major files and responsibilities:
