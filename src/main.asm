@@ -25,6 +25,7 @@
 global main                    ; the process entry point gcc's CRT calls
 extern on_activate              ; defined in window.asm -- fires when launched with no file argument
 extern on_open_signal            ; defined in window.asm -- fires when launched WITH a file argument (see G_APPLICATION_HANDLES_OPEN below)
+extern register_app_resources    ; defined in resources.asm -- must run before any gtk_builder_new_from_resource call (window.asm, menu.asm)
 
 section .rodata
     ; GApplication's "application ID" -- a reverse-DNS-style string GLib
@@ -74,6 +75,12 @@ main:
 
     mov  r12, rdi               ; r12 = argc (rdi is caller-saved -- would not survive the CCALLs below)
     mov  r13, rsi                ; r13 = argv (same reasoning)
+
+    ; --- register the embedded GtkBuilder/GResource bundle -------------
+    ; before anything else -- window.asm/menu.asm's ensure_main_window and
+    ; build_menubar both load UI from "/org/unbloatedpad/Editor/ui/*" the
+    ; first time either fires, which can only work once this has run
+    ICALL register_app_resources
 
     ; --- create the AdwApplication ------------------------------------
     lea  rdi, [rel app_id_str]              ; arg1 = application ID string

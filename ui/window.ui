@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  window.ui -- the main window's content: a plain GtkHeaderBar (used only
+  for the standard minimize/maximize/close controls, set as the window's
+  titlebar) plus the top-level vertical layout box (root_box), holding a
+  GtkScrolledWindow wrapping the GtkTextView. The classic File/Edit/... menu
+  bar (menu.ui, built from a separate GMenu model) and the "Ln X, Col Y"
+  status bar are still built at runtime and inserted as root_box's first
+  and last children respectively -- see window.asm's ensure_main_window --
+  since neither is a static widget with fixed properties the way everything
+  declared here is.
+-->
+<interface>
+  <object class="GtkHeaderBar" id="header_bar"/>
+
+  <object class="GtkBox" id="root_box">
+    <property name="orientation">vertical</property>
+    <property name="spacing">0</property>
+    <property name="margin-start">3</property>
+    <property name="margin-end">3</property>
+    <property name="margin-top">3</property>
+    <property name="margin-bottom">3</property>
+    <child>
+      <object class="GtkScrolledWindow" id="scrolled_window">
+        <property name="hscrollbar-policy">automatic</property>
+        <property name="vscrollbar-policy">automatic</property>
+        <property name="vexpand">true</property>
+        <property name="hexpand">true</property>
+        <child>
+          <object class="GtkTextView" id="text_view">
+            <property name="vexpand">true</property>
+            <property name="hexpand">true</property>
+            <property name="monospace">true</property>
+            <!-- matches win.word-wrap's initial GActionEntry state ("true") in actions.asm -->
+            <property name="wrap-mode">word-char</property>
+            <property name="left-margin">5</property>
+            <property name="right-margin">5</property>
+            <property name="top-margin">5</property>
+            <property name="bottom-margin">5</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ui.gresource.xml -- manifest for every GtkBuilder XML file under ui/,
+  compiled by the Makefile into build/ui.gresource (a raw GResource binary
+  bundle, via `glib-compile-resources --target`, deliberately without
+  --generate-source: no generated C is linked into this project), then
+  embedded into the executable itself via objcopy -- see src/resources.asm
+  for how it's registered at startup. Resource paths below are
+  "/org/unbloatedpad/Editor/ui/<file>", matching this app's id (see
+  app_id_str in main.asm / app_icon_name_str in window.asm).
+-->
+<gresources>
+  <gresource prefix="/org/unbloatedpad/Editor/ui">
+    <file>window.ui</file>
+    <file>menu.ui</file>
+    <file>finddlg.ui</file>
+  </gresource>
+</gresources>

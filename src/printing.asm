@@ -93,11 +93,24 @@ ensure_print_settings:
 ; -------------------------------------------------------------------------
 ; void on_page_setup_done(GtkPageSetup *page_setup, gpointer data)
 ; The GtkPageSetupDoneFunc for gtk_print_run_page_setup_dialog_async below.
+;
+; page_setup is NULL when the user cancels the dialog on its very first
+; use this run (i.e. when the page_setup we originally passed in was
+; itself NULL, since g_page_setup hadn't been set yet) -- GTK passes back
+; exactly what was given it in that case, rather than a fresh default.
+; Confirmed with gdb: $rdi == 0x0 at entry on Cancel. This installed
+; libgtk-4 apparently has its internal g_return_if_fail NULL/type checks
+; compiled out, so calling gtk_page_setup_copy(NULL) unconditionally
+; segfaults instead of just logging a critical warning -- hence the
+; explicit check below, rather than trusting GTK to reject it gracefully.
 ; -------------------------------------------------------------------------
 on_page_setup_done:
     push rbp
     mov  rbp, rsp
     sub  rsp, 16                  ; [rbp-8] = our own independent copy of the incoming page_setup -- the incoming pointer itself is only borrowed (GTK's own docs mark it transfer-none), so it isn't safe to just stash the raw pointer and assume it outlives this callback
+
+    test rdi, rdi
+    jz   .done            ; Cancel -- nothing was picked, leave g_page_setup exactly as it was
 
     CCALL gtk_page_setup_copy       ; GtkPageSetup *gtk_page_setup_copy(GtkPageSetup*) -- rdi is already this function's own incoming page_setup argument; rax = a new, independently-owned copy
     mov  [rbp-8], rax
@@ -111,6 +124,7 @@ on_page_setup_done:
     mov  rax, [rbp-8]
     mov  [rel g_page_setup], rax
 
+.done:
     leave
     ret
 
