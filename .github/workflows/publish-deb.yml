@@ -24,7 +24,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev
+          sudo apt-get install -y nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev gettext
 
       - name: Build .deb package
         run: make deb
