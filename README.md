@@ -39,7 +39,7 @@ A faithful, fully-working Notepad clone:
 | 📄 **File** | New · Open... · Save · Save As... · Page Setup... · Print... · Exit |
 | ✂️ **Edit** | Undo · Cut · Copy · Paste · Delete · Find... · Find Next · Replace... · Go To... · Select All · Time/Date |
 | 🎨 **Format** | Word Wrap · Font... |
-| 👁️ **View** | Status Bar · Dark Mode |
+| 👁️ **View** | Status Bar · Dark Mode · Line Numbers |
 | ❓ **Help** | View Help (opens this repo) · About UnbloatedPad |
 
 Plus the details that make it feel like a real app, not a toy:
@@ -49,10 +49,15 @@ Plus the details that make it feel like a real app, not a toy:
 - 🚨 **Error dialogs that actually tell you something** — a failed
   open/read/write pops a real alert *and* logs it (journal/stderr) for
   later digging.
+- 🔢 **A line-numbers gutter, on by default** — the gutter width tracks
+  the document's line count in real time (1 digit for a new file, growing
+  as needed), at effectively zero cost regardless of file size: editing a
+  10,000,000-line file feels the same as editing a 100-line one, since
+  the per-keystroke check is O(1) and the actual resize only happens the
+  handful of times the digit count itself changes.
 - 🌗 **Dark Mode**, a live "Ln X, Col Y" status bar, and all the
   keyboard shortcuts you'd expect (`Ctrl+N/O/S`, `Ctrl+Shift+S`, `Ctrl+F`,
   `F3`, `Ctrl+H`, `Ctrl+G`, `F5`, ...).
-- 🧠 Menus grouped with real separators, not just a wall of items.
 
 ## 👤 Author
 
@@ -147,6 +152,7 @@ crammed together, unlike the original:
 | `finddlg.asm` | Find, Replace, and Go To Line dialogs and the search logic behind them |
 | `format.asm` | Word Wrap, Font (via `GtkFontDialog`, applied as hand-built CSS), Dark Mode |
 | `statusbar.asm` | The "Ln X, Col Y" status bar |
+| `linenum.asm` | 🔢 View > Line Numbers (on by default): a `GtkDrawingArea` dropped into the text view's own gutter (`gtk_text_view_set_gutter`), hand-drawn per visible line with Pango/cairo |
 | `unsaved.asm` | Tracks unsaved changes; interposes a Save/Discard/Cancel prompt in front of New/Open/Quit/window-close |
 | `about.asm` | Help > View Help (opens this repo) and Help > About, via `AdwAboutDialog` |
 | `accels.asm` | Keyboard accelerators (`Ctrl+N`, `F3`, ...) for actions with no built-in GTK binding |
@@ -210,8 +216,9 @@ re-verify with a two-line C program before trusting these constants.
   the ensuing Save As is asynchronous and the New/Open/Quit you originally
   asked for is dropped rather than chained after it completes — save,
   then repeat the action.
-- 🔢 No Line Numbers gutter (the original gates this behind a build flag
-  too, off by default).
+- 🔢 The line-numbers gutter always draws in a fixed mid-gray, not a
+  theme-aware color — chosen to stay readable in both light and dark mode
+  without extra plumbing.
 
 ---
 
