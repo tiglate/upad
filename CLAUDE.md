@@ -39,6 +39,12 @@ the About dialog's version field. To bump the version, edit `.version`
 only; `build/version.inc` is regenerated automatically and gitignored
 (it's derived, like everything else under `build/`).
 
+`.github/workflows/publish-deb.yml` fires on `release: published` (never
+on drafts, edits, or plain pushes/tags): it runs `make deb` — which reads
+`.version` the same way a local build would, not the release's own tag
+name — and uploads the resulting `upad_<version>_amd64.deb` as an asset
+on that release via `gh release upload`.
+
 Requires: `nasm`, `gcc`, `pkg-config`, `libgtk-4-dev`, `libadwaita-1-dev`
 (>= 1.5, for GTK 4.10-era Font/Find/Replace/Go To dialog APIs). If
 `pkg-config` can't find `gtk4`/`libadwaita-1` even though installed, point
