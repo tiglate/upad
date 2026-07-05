@@ -30,17 +30,17 @@
 ; user_data -- same simplifying assumption as g_font_dialog's single
 ; cached instance.
 
-%include "consts.inc"          ; GTK_TEXT_ITER_SIZE, FALSE, G_CONNECT_DEFAULT, GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG, GTK_PRINT_OPERATION_RESULT_*
-%include "callconv.inc"        ; CCALL/ICALL macros
-%include "extern.inc"          ; extern declarations for every GTK/GLib/Pango/cairo call used below
+%include "consts.inc"    ; GTK_TEXT_ITER_SIZE, FALSE, G_CONNECT_DEFAULT, GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG, GTK_PRINT_OPERATION_RESULT_*
+%include "callconv.inc"  ; CCALL/ICALL macros
+%include "extern.inc"    ; extern declarations for every GTK/GLib/Pango/cairo call used below
 
-global on_page_setup_activate   ; "win.page-setup" GAction handler (actions.asm)
-global on_print_activate        ; "win.print" GAction handler
+global on_page_setup_activate  ; "win.page-setup" GAction handler (actions.asm)
+global on_print_activate       ; "win.print" GAction handler
 
-extern g_window                  ; main.asm -- parent for the page-setup/print dialogs
-extern g_buffer                  ; main.asm -- the text buffer Print reads from
-extern g_font_desc_str            ; format.asm -- the last Format > Font... pick, as Pango text form ("Monospace Bold 12"); empty string if never picked
-extern report_error                ; errdlg.asm -- shows an error dialog and logs, called if the print job itself fails
+extern g_window         ; main.asm -- parent for the page-setup/print dialogs
+extern g_buffer         ; main.asm -- the text buffer Print reads from
+extern g_font_desc_str  ; format.asm -- the last Format > Font... pick, as Pango text form ("Monospace Bold 12"); empty string if never picked
+extern report_error     ; errdlg.asm -- shows an error dialog and logs, called if the print job itself fails
 
 section .rodata
     default_print_font_str  db "Monospace 11", 0   ; same default Format > Font itself opens on when g_font_desc_str is still empty
@@ -58,8 +58,8 @@ section .rodata
 
 section .bss
     align 8
-    g_print_settings       resq 1   ; GtkPrintSettings*, lazily created by ensure_print_settings, reused across every Page Setup/Print this run
-    g_page_setup           resq 1   ; GtkPageSetup*, NULL until Page Setup has been used at least once (Print tolerates NULL here -- it just means "use the printer's own default")
+    g_print_settings       resq 1  ; GtkPrintSettings*, lazily created by ensure_print_settings, reused across every Page Setup/Print this run
+    g_page_setup           resq 1  ; GtkPageSetup*, NULL until Page Setup has been used at least once (Print tolerates NULL here -- it just means "use the printer's own default")
 
     ; per-print-job state, valid only between on_print_begin and
     ; on_print_end (there is only ever one job in flight -- see file header)
@@ -116,12 +116,12 @@ on_page_setup_activate:
     mov  rbp, rsp
     ICALL ensure_print_settings        ; gtk_print_run_page_setup_dialog_async wants a real GtkPrintSettings, not NULL
 
-    mov  rdi, [rel g_window]             ; arg1 = parent
-    mov  rsi, [rel g_page_setup]           ; arg2 = page_setup -- NULL the first time this run, which is explicitly valid (GTK builds a default)
-    mov  rdx, [rel g_print_settings]         ; arg3 = settings
-    lea  rcx, [rel on_page_setup_done]         ; arg4 = done_cb
+    mov  rdi, [rel g_window]                     ; arg1 = parent
+    mov  rsi, [rel g_page_setup]                 ; arg2 = page_setup -- NULL the first time this run, which is explicitly valid (GTK builds a default)
+    mov  rdx, [rel g_print_settings]             ; arg3 = settings
+    lea  rcx, [rel on_page_setup_done]           ; arg4 = done_cb
     xor  r8, r8                                  ; arg5 = data = NULL
-    CCALL gtk_print_run_page_setup_dialog_async     ; void gtk_print_run_page_setup_dialog_async(GtkWindow*, GtkPageSetup*, GtkPrintSettings*, GtkPageSetupDoneFunc, gpointer) -- shows the dialog, returns immediately
+    CCALL gtk_print_run_page_setup_dialog_async  ; void gtk_print_run_page_setup_dialog_async(GtkWindow*, GtkPageSetup*, GtkPrintSettings*, GtkPageSetupDoneFunc, gpointer) -- shows the dialog, returns immediately
 
     pop  rbp
     ret
@@ -154,13 +154,13 @@ on_print_begin:
     ; [rbp-200..-121] = start iter (80 bytes, GTK_TEXT_ITER_SIZE)
     ; [rbp-280..-201] = end iter (80 bytes)
 
-    mov  [rbp-8], rdi              ; operation
-    mov  [rbp-16], rsi             ; context
+    mov  [rbp-8], rdi   ; operation
+    mov  [rbp-16], rsi  ; context
 
     ; --- extract the whole buffer's text (same technique as fileio.asm's write_buffer_to_file) ---
     mov  rdi, [rel g_buffer]
-    lea  rsi, [rbp-200]              ; &start iter
-    lea  rdx, [rbp-280]                ; &end iter
+    lea  rsi, [rbp-200]  ; &start iter
+    lea  rdx, [rbp-280]  ; &end iter
     CCALL gtk_text_buffer_get_bounds
 
     mov  rdi, [rel g_buffer]
@@ -171,15 +171,15 @@ on_print_begin:
     mov  [rbp-32], rax
 
     ; --- build the layout, sized/fonted for this print context -------------
-    mov  rdi, [rbp-16]                  ; context
-    CCALL gtk_print_context_create_pango_layout   ; PangoLayout *gtk_print_context_create_pango_layout(GtkPrintContext*) -- rax = a new layout, ours (full ownership)
+    mov  rdi, [rbp-16]                           ; context
+    CCALL gtk_print_context_create_pango_layout  ; PangoLayout *gtk_print_context_create_pango_layout(GtkPrintContext*) -- rax = a new layout, ours (full ownership)
     mov  [rbp-24], rax
     mov  [rel g_print_job_layout], rax    ; also stash globally -- on_print_draw_page/on_print_end need it after this function returns
 
-    mov  rdi, [rbp-24]                      ; layout
-    mov  rsi, [rbp-32]                        ; text
-    mov  edx, -1                                ; length = -1 (NUL-terminated)
-    CCALL pango_layout_set_text                    ; copies the text internally, same convention as gtk_window_set_title etc.
+    mov  rdi, [rbp-24]           ; layout
+    mov  rsi, [rbp-32]           ; text
+    mov  edx, -1                 ; length = -1 (NUL-terminated)
+    CCALL pango_layout_set_text  ; copies the text internally, same convention as gtk_window_set_title etc.
 
     mov  rdi, [rbp-32]                                ; done with our own copy now
     CCALL g_free
@@ -196,24 +196,24 @@ on_print_begin:
     CCALL pango_font_description_from_string   ; rax = a new description, ours
     mov  [rbp-40], rax
 
-    mov  rdi, [rbp-24]                            ; layout
-    mov  rsi, [rbp-40]                              ; desc
-    CCALL pango_layout_set_font_description            ; copies the description internally
+    mov  rdi, [rbp-24]                       ; layout
+    mov  rsi, [rbp-40]                       ; desc
+    CCALL pango_layout_set_font_description  ; copies the description internally
 
     mov  rdi, [rbp-40]
     CCALL pango_font_description_free                     ; done with our own copy
 
     ; --- page width -> Pango units (float math: only place in this program that does) ---
-    mov  rdi, [rbp-16]                       ; context
-    CCALL gtk_print_context_get_width           ; double gtk_print_context_get_width(GtkPrintContext*) -- returns in XMM0
-    mulsd xmm0, [rel pango_scale_dbl]              ; xmm0 *= 1024.0
-    cvttsd2si eax, xmm0                               ; truncate to Pango's plain gint width unit
+    mov  rdi, [rbp-16]                 ; context
+    CCALL gtk_print_context_get_width  ; double gtk_print_context_get_width(GtkPrintContext*) -- returns in XMM0
+    mulsd xmm0, [rel pango_scale_dbl]  ; xmm0 *= 1024.0
+    cvttsd2si eax, xmm0                ; truncate to Pango's plain gint width unit
     movsxd rax, eax
     mov  [rbp-48], rax
 
-    mov  rdi, [rbp-24]                                  ; layout
-    mov  esi, [rbp-48]                                    ; width
-    CCALL pango_layout_set_width                             ; void pango_layout_set_width(PangoLayout*, int) -- wraps the text to fit the printable page width
+    mov  rdi, [rbp-24]            ; layout
+    mov  esi, [rbp-48]            ; width
+    CCALL pango_layout_set_width  ; void pango_layout_set_width(PangoLayout*, int) -- wraps the text to fit the printable page width
 
     ; --- page height -> Pango units, same conversion ------------------------
     mov  rdi, [rbp-16]
@@ -242,36 +242,36 @@ on_print_begin:
     mov  [rel g_print_page_breaks], rax
 
     ; --- walk every line, deciding where each page break falls --------------
-    mov  qword [rbp-80], 0        ; break_count = 0
-    mov  qword [rbp-96], 0        ; line_index = 0
-    mov  qword [rbp-104], 0       ; page_height_accum = 0
+    mov  qword [rbp-80], 0   ; break_count = 0
+    mov  qword [rbp-96], 0   ; line_index = 0
+    mov  qword [rbp-104], 0  ; page_height_accum = 0
 
-    mov  rdi, [rbp-24]              ; layout
-    CCALL pango_layout_get_iter        ; PangoLayoutIter *pango_layout_get_iter(PangoLayout*) -- rax = a new iter, ours to free
+    mov  rdi, [rbp-24]           ; layout
+    CCALL pango_layout_get_iter  ; PangoLayoutIter *pango_layout_get_iter(PangoLayout*) -- rax = a new iter, ours to free
     mov  [rbp-88], rax
 
 .line_loop:
-    mov  rdi, [rbp-88]                  ; iter
-    lea  rsi, [rbp-112]                   ; &y0
-    lea  rdx, [rbp-120]                    ; &y1
-    CCALL pango_layout_iter_get_line_yrange   ; void pango_layout_iter_get_line_yrange(PangoLayoutIter*, int *y0, int *y1) -- the vertical band belonging to the current line, layout-relative
+    mov  rdi, [rbp-88]                       ; iter
+    lea  rsi, [rbp-112]                      ; &y0
+    lea  rdx, [rbp-120]                      ; &y1
+    CCALL pango_layout_iter_get_line_yrange  ; void pango_layout_iter_get_line_yrange(PangoLayoutIter*, int *y0, int *y1) -- the vertical band belonging to the current line, layout-relative
 
-    mov  eax, [rbp-120]              ; y1
-    sub  eax, [rbp-112]                 ; - y0 = this line's height
+    mov  eax, [rbp-120]  ; y1
+    sub  eax, [rbp-112]  ; - y0 = this line's height
     movsxd rax, eax
     mov  [rbp-128], rax                   ; line_height
 
-    mov  rax, [rbp-104]                     ; page_height_accum
-    add  rax, [rbp-128]                       ; + line_height
-    cmp  rax, [rbp-56]                          ; > page_height_units ?
+    mov  rax, [rbp-104]  ; page_height_accum
+    add  rax, [rbp-128]  ; + line_height
+    cmp  rax, [rbp-56]   ; > page_height_units ?
     jle  .fits
 
     ; doesn't fit -- this line starts a new page
-    mov  rax, [rbp-72]                             ; breaks
-    mov  rcx, [rbp-80]                                ; break_count
-    mov  edx, [rbp-96]                                  ; line_index (32-bit)
-    mov  [rax + rcx*4], edx                                ; breaks[break_count] = line_index
-    inc  qword [rbp-80]                                      ; break_count++
+    mov  rax, [rbp-72]       ; breaks
+    mov  rcx, [rbp-80]       ; break_count
+    mov  edx, [rbp-96]       ; line_index (32-bit)
+    mov  [rax + rcx*4], edx  ; breaks[break_count] = line_index
+    inc  qword [rbp-80]      ; break_count++
     mov  rax, [rbp-128]
     mov  [rbp-104], rax                                        ; page_height_accum = line_height (this line is now the new page's first)
     jmp  .advance
@@ -297,9 +297,9 @@ on_print_begin:
     mov  rax, [rbp-64]
     mov  [rel g_print_line_count], rax
 
-    mov  rdi, [rbp-8]              ; operation
-    mov  rax, [rbp-80]                ; break_count
-    inc  rax                            ; + 1 = n_pages (always >= 1)
+    mov  rdi, [rbp-8]   ; operation
+    mov  rax, [rbp-80]  ; break_count
+    inc  rax            ; + 1 = n_pages (always >= 1)
     mov  esi, eax
     CCALL gtk_print_operation_set_n_pages    ; void gtk_print_operation_set_n_pages(GtkPrintOperation*, int)
 
@@ -406,17 +406,17 @@ on_print_draw_page:
     mov  rdi, [rbp-40]
     CCALL pango_layout_iter_get_baseline             ; int pango_layout_iter_get_baseline(PangoLayoutIter*) -- Pango units, relative to the WHOLE document's top
     movsxd rax, eax
-    sub  rax, [rbp-56]                                  ; -> relative to THIS PAGE's top instead
-    cvtsi2sd xmm1, rax                                     ; y, as a double, in Pango units
-    divsd xmm1, [rel pango_scale_dbl]                        ; -> cairo/layout units
-    pxor xmm0, xmm0                                            ; x = 0.0 (left edge of the printable area)
+    sub  rax, [rbp-56]                 ; -> relative to THIS PAGE's top instead
+    cvtsi2sd xmm1, rax                 ; y, as a double, in Pango units
+    divsd xmm1, [rel pango_scale_dbl]  ; -> cairo/layout units
+    pxor xmm0, xmm0                    ; x = 0.0 (left edge of the printable area)
 
-    mov  rdi, [rbp-64]                                           ; cr
-    CCALL cairo_move_to                                             ; void cairo_move_to(cairo_t*, double x, double y) -- positions the NEXT show_layout_line call at this line's baseline
+    mov  rdi, [rbp-64]   ; cr
+    CCALL cairo_move_to  ; void cairo_move_to(cairo_t*, double x, double y) -- positions the NEXT show_layout_line call at this line's baseline
 
-    mov  rdi, [rbp-64]                                                ; cr
-    mov  rsi, [rbp-96]                                                  ; line
-    CCALL pango_cairo_show_layout_line                                     ; void pango_cairo_show_layout_line(cairo_t*, PangoLayoutLine*)
+    mov  rdi, [rbp-64]                  ; cr
+    mov  rsi, [rbp-96]                  ; line
+    CCALL pango_cairo_show_layout_line  ; void pango_cairo_show_layout_line(cairo_t*, PangoLayoutLine*)
 
     inc  qword [rbp-48]
     mov  rdi, [rbp-40]
@@ -511,8 +511,8 @@ on_print_activate:
     mov  rdi, [rbp-8]
     mov  esi, GTK_PRINT_OPERATION_ACTION_PRINT_DIALOG
     mov  rdx, [rel g_window]
-    xor  ecx, ecx                          ; arg4 = error = NULL -- only the return value is inspected below, no GError parsing needed
-    CCALL gtk_print_operation_run              ; GtkPrintOperationResult gtk_print_operation_run(GtkPrintOperation*, GtkPrintOperationAction, GtkWindow*, GError**)
+    xor  ecx, ecx                  ; arg4 = error = NULL -- only the return value is inspected below, no GError parsing needed
+    CCALL gtk_print_operation_run  ; GtkPrintOperationResult gtk_print_operation_run(GtkPrintOperation*, GtkPrintOperationAction, GtkWindow*, GError**)
     movsxd rax, eax
     mov  [rbp-24], rax
 

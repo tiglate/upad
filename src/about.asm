@@ -7,12 +7,12 @@
 ; doing the actual assembly authoring under his direction -- see the
 ; About dialog built below and linux/README.md for the same credit.
 
-%include "consts.inc"          ; GTK_LICENSE_APACHE_2_0
-%include "callconv.inc"        ; CCALL macro + calling-convention discipline
-%include "extern.inc"          ; extern declarations for every GTK/Adw call used below
+%include "consts.inc"    ; GTK_LICENSE_APACHE_2_0
+%include "callconv.inc"  ; CCALL macro + calling-convention discipline
+%include "extern.inc"    ; extern declarations for every GTK/Adw call used below
 
-global on_about_activate       ; the "win.about" GAction handler, called from actions.asm's win_actions table
-global on_view_help_activate   ; the "win.view-help" GAction handler, called from actions.asm's win_actions table
+global on_about_activate      ; the "win.about" GAction handler, called from actions.asm's win_actions table
+global on_view_help_activate  ; the "win.view-help" GAction handler, called from actions.asm's win_actions table
 
 extern g_window                 ; main window (main.asm/window.asm) -- About is presented as a child of it, and passed as GtkUriLauncher's parent
 
@@ -55,21 +55,21 @@ section .text
 ; that there's no benefit to caching/reusing one, unlike e.g. the Font
 ; dialog which the user might reopen repeatedly) and immediately shows it.
 on_about_activate:
-    push rbp                              ; save caller's frame pointer
-    mov  rbp, rsp                         ; establish our own frame
-    sub  rsp, 16                          ; reserve one 8-byte local slot (16 for alignment): [rbp-8] = the AdwAboutDialog* we're building
+    push rbp       ; save caller's frame pointer
+    mov  rbp, rsp  ; establish our own frame
+    sub  rsp, 16   ; reserve one 8-byte local slot (16 for alignment): [rbp-8] = the AdwAboutDialog* we're building
 
     ; --- construct the dialog object ---------------------------------
-    CCALL adw_about_dialog_new            ; AdwDialog *adw_about_dialog_new(void) -- rax = new dialog, owned by us until we hand it to adw_dialog_present below
-    mov  [rbp-8], rax                     ; stash it -- every field-setter call below will clobber rax via its own CCALL
+    CCALL adw_about_dialog_new  ; AdwDialog *adw_about_dialog_new(void) -- rax = new dialog, owned by us until we hand it to adw_dialog_present below
+    mov  [rbp-8], rax           ; stash it -- every field-setter call below will clobber rax via its own CCALL
 
     ; --- fill in the informational fields, one setter call each ------
-    mov  rdi, [rbp-8]                     ; arg1 = self (the dialog)
-    lea  rsi, [rel app_name_str]          ; arg2 = "UnbloatedPad"
+    mov  rdi, [rbp-8]             ; arg1 = self (the dialog)
+    lea  rsi, [rel app_name_str]  ; arg2 = "UnbloatedPad"
     CCALL adw_about_dialog_set_application_name
 
-    mov  rdi, [rbp-8]                     ; reload self -- rdi is caller-saved, the previous CCALL may have clobbered it
-    lea  rsi, [rel dev_name_str]          ; "Tiglate Pileser III (tiglate)" -- the Linux port's author
+    mov  rdi, [rbp-8]             ; reload self -- rdi is caller-saved, the previous CCALL may have clobbered it
+    lea  rsi, [rel dev_name_str]  ; "Tiglate Pileser III (tiglate)" -- the Linux port's author
     CCALL adw_about_dialog_set_developer_name
 
     mov  rdi, [rbp-8]
@@ -95,12 +95,12 @@ on_about_activate:
     CCALL adw_about_dialog_add_credit_section
 
     ; --- show it, parented to the main window -------------------------
-    mov  rdi, [rbp-8]                     ; self
-    mov  rsi, [rel g_window]              ; parent -- AdwDialog presents itself modally/as-a-sheet relative to this window
+    mov  rdi, [rbp-8]         ; self
+    mov  rsi, [rel g_window]  ; parent -- AdwDialog presents itself modally/as-a-sheet relative to this window
     CCALL adw_dialog_present
 
-    leave                                  ; mov rsp, rbp; pop rbp -- tear down our frame
-    ret                                    ; back to whatever invoked the "about" action (GTK's action-activation machinery)
+    leave  ; mov rsp, rbp; pop rbp -- tear down our frame
+    ret    ; back to whatever invoked the "about" action (GTK's action-activation machinery)
 
 ; void on_view_help_activate(GSimpleAction *action, GVariant *parameter, gpointer user_data)
 ; Help > View Help: opens this project's GitHub repo in the user's default
@@ -112,16 +112,16 @@ on_view_help_activate:
     mov  rbp, rsp
     sub  rsp, 16                  ; [rbp-8] = the GtkUriLauncher object, needed across the two calls below
 
-    lea  rdi, [rel help_url_str]     ; arg1 = uri
-    CCALL gtk_uri_launcher_new          ; GtkUriLauncher *gtk_uri_launcher_new(const char *uri) -- rax = new launcher, owned by us until handed off below
+    lea  rdi, [rel help_url_str]  ; arg1 = uri
+    CCALL gtk_uri_launcher_new    ; GtkUriLauncher *gtk_uri_launcher_new(const char *uri) -- rax = new launcher, owned by us until handed off below
     mov  [rbp-8], rax
 
-    mov  rdi, [rbp-8]                  ; arg1 = self
-    mov  rsi, [rel g_window]             ; arg2 = parent
+    mov  rdi, [rbp-8]                      ; arg1 = self
+    mov  rsi, [rel g_window]               ; arg2 = parent
     xor  edx, edx                          ; arg3 = cancellable = NULL
-    lea  rcx, [rel on_view_help_finished]    ; arg4 = callback
-    xor  r8, r8                                ; arg5 = user_data = NULL
-    CCALL gtk_uri_launcher_launch                 ; void gtk_uri_launcher_launch(GtkUriLauncher*, GtkWindow*, GCancellable*, GAsyncReadyCallback, gpointer) -- shows/launches, returns immediately
+    lea  rcx, [rel on_view_help_finished]  ; arg4 = callback
+    xor  r8, r8                            ; arg5 = user_data = NULL
+    CCALL gtk_uri_launcher_launch          ; void gtk_uri_launcher_launch(GtkUriLauncher*, GtkWindow*, GCancellable*, GAsyncReadyCallback, gpointer) -- shows/launches, returns immediately
 
     mov  rdi, [rbp-8]
     CCALL g_object_unref                             ; drop our reference -- the async op holds its own ref while running, same reasoning as fileio.asm's file-dialog calls
@@ -141,7 +141,7 @@ on_view_help_finished:
     ; source (rdi) and res (rsi) already positioned correctly for the
     ; *_finish(self, result, error) call, same reasoning as fileio.asm's
     ; on_open_finished
-    xor  edx, edx                 ; arg3 = error = NULL, ignored
-    CCALL gtk_uri_launcher_launch_finish   ; gboolean gtk_uri_launcher_launch_finish(GtkUriLauncher*, GAsyncResult*, GError**) -- return value ignored
+    xor  edx, edx                         ; arg3 = error = NULL, ignored
+    CCALL gtk_uri_launcher_launch_finish  ; gboolean gtk_uri_launcher_launch_finish(GtkUriLauncher*, GAsyncResult*, GError**) -- return value ignored
     pop  rbp
     ret
