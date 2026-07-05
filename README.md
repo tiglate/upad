@@ -11,6 +11,8 @@
   [![License](https://img.shields.io/badge/license-Apache%202.0-3a3020?style=for-the-badge)](LICENSE)
   [![Platform](https://img.shields.io/badge/platform-Linux-f2e8c8?style=for-the-badge&logo=linux&logoColor=black)](#-build)
 
+  <img src="screenshots/screenshot-2026-07-05.png" width="700" alt="UnbloatedPad editing a text file, showing the menu bar, line-numbers gutter, and status bar">
+
 </div>
 
 ---
