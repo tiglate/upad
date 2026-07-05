@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; editops.asm -- Undo, Cut, Copy, Paste, Delete, Select All, and Time/Date.
 ;
 ; The first six all reduce to invoking one of GTK4's own built-in text

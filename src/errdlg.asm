@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; errdlg.asm -- surfaces a failure to the user AND to a durable log, instead
 ; of failing silently. Two entry points:
 ;

@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; accels.asm -- keyboard accelerators for actions that don't already have a
 ; GTK built-in default binding. (Cut/Copy/Paste/Undo/Select-All are bound
 ; automatically by GtkTextView itself since they route through GTK's own

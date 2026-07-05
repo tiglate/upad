@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; window.asm -- builds the main window (menu bar, text view, status bar)
 ; the first time GApplication fires either of the two signals it can
 ; start on, and dispatches both of them.
@@ -116,7 +120,7 @@ register_icon_search_path:
     ret
 
 ; void on_activate(GApplication *app, gpointer user_data)
-; Fires when the app is launched with no file arguments (a plain `trpad`,
+; Fires when the app is launched with no file arguments (a plain `upad`,
 ; or activating an already-running single instance with no new files).
 on_activate:
     push rbp                  ; save caller's (GLib's signal-emission code) frame pointer
@@ -130,8 +134,8 @@ on_activate:
 ; void on_open_signal(GApplication *app, GFile **files, gint n_files,
 ;                      const gchar *hint, gpointer user_data)
 ; Fires instead of "activate" when launched with a file argument (e.g.
-; `trpad somefile.txt`, or a file manager "Open With" -- see the .desktop
-; file's Exec=trpad %F). g_app was created with G_APPLICATION_HANDLES_OPEN
+; `upad somefile.txt`, or a file manager "Open With" -- see the .desktop
+; file's Exec=upad %F). g_app was created with G_APPLICATION_HANDLES_OPEN
 ; specifically so this signal exists at all (main.asm). `files` is a
 ; GFile** array of n_files entries; this editor only ever opens the
 ; first one, matching classic Notepad's own single-document model.

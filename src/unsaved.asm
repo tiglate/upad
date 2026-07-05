@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; unsaved.asm -- tracks whether the buffer has unsaved changes and, when
 ; it does, interposes an AdwAlertDialog (Save/Discard/Cancel) in front of
 ; New, Open, and Quit (both the menu items and the window's own titlebar

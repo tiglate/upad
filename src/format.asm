@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; format.asm -- Format menu (Word Wrap, Font) and the Dark Mode half of the
 ; View menu. Word Wrap and Dark Mode both flip a boolean; Word Wrap uses
 ; GTK's own stateful-action/checkbox machinery via the shared

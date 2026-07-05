@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; main.asm -- process entry point and application bootstrap.
 ;
 ; main() is the normal C entry point: glibc's CRT (crt1.o, supplied

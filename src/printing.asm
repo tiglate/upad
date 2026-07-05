@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; printing.asm -- File > Page Setup... and File > Print..., via
 ; GtkPrintRunPageSetupDialogAsync and GtkPrintOperation (both plain GTK4
 ; APIs, not GTK 4.10+ -- these predate the newer async Gtk*Dialog family

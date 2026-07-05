@@ -1,11 +1,13 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; about.asm -- Help > About UnbloatedPad, via AdwAboutDialog (libadwaita
 ; 1.5+; this build links against 1.5.0).
 ;
-; UnbloatedPad is the Linux/GTK4+libadwaita port of TinyRetroPad (the
-; original Win32/MASM project by Dave Plummer and Matt Power). This port
-; was written by Tiglate Pileser III (tiglate) with Claude (Anthropic)
-; doing the actual assembly authoring under his direction -- see the
-; About dialog built below and linux/README.md for the same credit.
+; UnbloatedPad is a from-scratch Linux/GTK4+libadwaita Notepad clone,
+; written by Tiglate Pileser III (tiglate) with AI assistance -- see
+; the About dialog built below and README.md for the same credit.
 
 %include "consts.inc"    ; GTK_LICENSE_APACHE_2_0
 %include "callconv.inc"  ; CCALL macro + calling-convention discipline
@@ -18,9 +20,8 @@ global on_view_help_activate  ; the "win.view-help" GAction handler, called from
 extern g_window                 ; main window (main.asm/window.asm) -- About is presented as a child of it, and passed as GtkUriLauncher's parent
 
 section .rodata
-    ; this port's own GitHub repo (as opposed to website_str above, which
-    ; deliberately points at the original Windows TinyRetroPad this was
-    ; ported from) -- what Help > View Help opens
+    ; this project's GitHub repo -- what Help > View Help opens, and also
+    ; what the About dialog's own Website field points at.
     help_url_str  db "https://github.com/tiglate/upad", 0
     ; AdwAboutDialog text fields. Every one of these is just a plain
     ; NUL-terminated C string handed to a dedicated setter -- no string
@@ -29,25 +30,7 @@ section .rodata
     dev_name_str  db "Tiglate Pileser III (tiglate)", 0
     ; version_str itself comes from version.inc (%include-d above), not
     ; declared here -- see the .version file at the repo root
-    comments_str  db "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). This Linux port was created by Tiglate Pileser III (tiglate) using Claude (Anthropic) as the assembly author, based on the original Win32/MASM TinyRetroPad.", 0
-    website_str   db "https://github.com/davepl/TinyRetroPad", 0
-
-    ; "Original Windows Edition" credit section: adw_about_dialog_add_credit_section
-    ; wants a NULL-terminated array of "Name" (or "Name <email>") strings,
-    ; not a single blob, so the two author names are separate C strings...
-    credit_name_1 db "Dave Plummer", 0
-    credit_name_2 db "Matt Power", 0
-    credit_section_title db "Original Windows Edition (TinyRetroPad)", 0
-
-section .data
-    align 8
-    ; ...referenced from this array, which is what actually gets passed as
-    ; the "const char **people" argument. The trailing 0 is the required
-    ; NULL terminator that tells GTK where the list of names ends.
-    credit_people:
-        dq credit_name_1
-        dq credit_name_2
-        dq 0
+    comments_str  db "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance.", 0
 
 section .text
 
@@ -83,18 +66,12 @@ on_about_activate:
     CCALL adw_about_dialog_set_comments
 
     mov  rdi, [rbp-8]
-    lea  rsi, [rel website_str]           ; upstream project repo (the original Windows TinyRetroPad this is ported from)
+    lea  rsi, [rel help_url_str]           ; this project's own GitHub repo
     CCALL adw_about_dialog_set_website
 
     mov  rdi, [rbp-8]
-    mov  esi, GTK_LICENSE_APACHE_2_0      ; matches the Apache-2.0 LICENSE.TXT this whole repository (Windows original + this port) ships under
+    mov  esi, GTK_LICENSE_APACHE_2_0      ; matches the Apache-2.0 LICENSE this repository ships under
     CCALL adw_about_dialog_set_license_type
-
-    ; --- add a separate credit section naming the original authors ---
-    mov  rdi, [rbp-8]                     ; self
-    lea  rsi, [rel credit_section_title]  ; "Original Windows Edition (TinyRetroPad)"
-    lea  rdx, [rel credit_people]         ; NULL-terminated {Dave Plummer, Matt Power, NULL} array built above
-    CCALL adw_about_dialog_add_credit_section
 
     ; --- show it, parented to the main window -------------------------
     mov  rdi, [rbp-8]         ; self

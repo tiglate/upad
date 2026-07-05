@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; consts.inc -- shared constants: GLib/GObject/GTK4/libadwaita enum values,
 ; flags and struct layouts. Values are taken directly from the installed
 ; system headers (gtk-4.0, libadwaita-1, glib-2.0) rather than guessed --

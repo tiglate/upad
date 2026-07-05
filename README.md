@@ -19,13 +19,12 @@
 
 ## 🧵 What is this?
 
-**UnbloatedPad** (`upad`) is a Linux/GTK4 + libadwaita port of
-[TinyRetroPad](https://github.com/davepl/TinyRetroPad), the Win32/MASM
-project by Dave Plummer and Matt Power. Same spirit — **no C glue code
-anywhere** — but unlike the original, this port doesn't chase a minimal
-byte count. The goal is a correct, readable, maintainable GTK4
-application that just so happens to call straight into the `libgtk-4` /
-`libadwaita-1` / `libgio-2.0` / `libgobject-2.0` C ABI from raw assembly.
+**UnbloatedPad** (`upad`) is a classic Notepad-style text editor for
+Linux — **no C glue code anywhere**, just raw NASM calling straight into
+the `libgtk-4` / `libadwaita-1` / `libgio-2.0` / `libgobject-2.0` C ABI.
+The goal is a correct, readable, maintainable GTK4 application that just
+so happens to be written entirely by hand in assembly, not a
+minimal-byte-count exercise.
 
 GCC shows up exactly once, as the link driver, so the binary gets a
 normal glibc CRT startup (`_start`, TLS, `malloc`, pthreads) — GTK/GLib
@@ -67,11 +66,12 @@ Plus the details that make it feel like a real app, not a toy:
 
 ## 👤 Author
 
-This Linux port (renamed **UnbloatedPad**, distinct from the Windows
-**TinyRetroPad** it's ported from) was created by **Tiglate Pileser III**
-(`tiglate`), written with 🤖 **Claude (Anthropic)** acting as the
-assembly author under his direction. The original Windows/MASM
-TinyRetroPad this is ported from is by Dave Plummer and Matt Power.
+Created by **Tiglate Pileser III** (`tiglate`), written with 🤖 **Claude
+(Anthropic)** acting as the assembly author under his direction. Loosely
+inspired by [TinyRetroPad](https://github.com/davepl/TinyRetroPad), an
+earlier Win32/MASM project — same "no C glue code" spirit, but a
+from-scratch rewrite for a completely different platform and API, with
+no code shared between the two.
 
 ## 🧰 Requirements
 
@@ -161,7 +161,7 @@ all. 🐧
 ## 🏗️ Architecture
 
 One file per feature area — no byte-count pressure keeping things
-crammed together, unlike the original:
+crammed together:
 
 | File | Owns |
 |---|---|

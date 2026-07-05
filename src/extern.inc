@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; extern.inc -- declarations for GLib/GObject/GTK4/libadwaita C functions
 ; called directly from assembly. Every one of these is a plain (non-macro)
 ; C ABI entry point exported by libgtk-4.so / libadwaita-1.so / libgobject

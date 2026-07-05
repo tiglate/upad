@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; actions.asm -- GAction wiring. Menu items in menu.asm refer to actions by
 ; name ("win.foo" / "app.foo"); this file is where those names become real
 ; GSimpleAction objects with activate callbacks, registered on either the

@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; statusbar.asm -- the "Ln X, Col Y" status bar (plain GtkLabel, updated
 ; whenever the cursor moves) and its View > Status Bar visibility toggle.
 

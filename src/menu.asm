@@ -1,8 +1,11 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; menu.asm -- builds the classic File/Edit/Format/View/Help menu bar as a
-; GMenu model tree, then wraps it in a GtkPopoverMenuBar widget. Every
-; label/mnemonic below is a direct port of the original trpad.asm menu
-; text (MFile, MNew, MOpen, ... in trpad.asm), just with GTK's "_"
-; mnemonic marker instead of Win32's "&".
+; GMenu model tree, then wraps it in a GtkPopoverMenuBar widget. The
+; label/mnemonic text below follows classic Notepad convention, with
+; GTK's "_" mnemonic marker instead of Win32's "&".
 ;
 ; Menu items reference actions by name ("win.foo" is resolved against the
 ; GtkApplicationWindow's own action map; "app.foo" against the

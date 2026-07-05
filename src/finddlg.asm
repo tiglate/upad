@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; finddlg.asm -- Find, Replace, and Go To Line. Each is a small plain
 ; GtkWindow (not modal, transient-for the main window), built lazily the
 ; first time it's needed and then just shown/hidden on reuse -- closing

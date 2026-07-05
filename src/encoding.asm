@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; encoding.asm -- transcodes a file's bytes to UTF-8 on load if they
 ; aren't already valid UTF-8, and asks (once, on the first Save/Save As
 ; after opening such a file) whether to keep writing it back out in its

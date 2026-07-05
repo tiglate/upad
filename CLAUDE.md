@@ -6,9 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 UnbloatedPad (`upad`) — a Linux GTK4 + libadwaita Notepad-style text editor,
 written **entirely in hand-written x86-64 assembly** (NASM), with no C glue
-code. It's a Linux port of TinyRetroPad (a Windows/MASM project); this repo
-is just the Linux port, not the monorepo it was extracted from — ignore any
-stray references elsewhere to a `linux/` subdirectory or a top-level
+code. It's loosely inspired by TinyRetroPad (a Windows/MASM project) — same
+"no C glue code" spirit and Notepad feature set, but a from-scratch rewrite
+targeting a completely different platform/API, sharing no actual code with
+it beyond a few literal menu-label strings. This repo is standalone, not
+part of the monorepo TinyRetroPad itself lives in — ignore any stray
+references elsewhere to a `linux/` subdirectory or a top-level
 `../README.md`, they don't apply here. Everything lives at the repo root.
 
 GCC is used only as the link driver (to get a normal glibc CRT startup —

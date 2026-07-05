@@ -1,3 +1,7 @@
+; Copyright (c) 2026 Tiglate Pileser III (tiglate). Created with AI
+; assistance. Licensed under the Apache License, Version 2.0; see
+; LICENSE at the repo root for the full text.
+
 ; callconv.inc -- calling-convention discipline shared by every .asm file.
 ;
 ; ABI: System V AMD64. Integer/pointer args go in rdi, rsi, rdx, rcx, r8, r9
