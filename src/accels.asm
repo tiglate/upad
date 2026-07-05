@@ -20,9 +20,9 @@
 %include "callconv.inc"        ; CCALL/ICALL macros
 %include "extern.inc"          ; extern gtk_application_set_accels_for_action
 
-global setup_accels             ; called once from window.asm's ensure_main_window
+global setup_accels            ; called once from window.asm's ensure_main_window
 
-extern g_app                    ; the AdwApplication*/GtkApplication* (main.asm) -- accelerators are registered on the application, not any one window
+extern g_app                   ; the AdwApplication*/GtkApplication* (main.asm) -- accelerators are registered on the application, not any one window
 
 section .rodata
     ; --- the accelerator (keystroke) for each action, in GTK's own
@@ -36,7 +36,7 @@ section .rodata
     a_find_next   db "F3", 0              ; classic Notepad's Find Next shortcut
     a_replace     db "<Control>h", 0
     a_goto        db "<Control>g", 0
-    a_time_date   db "F5", 0               ; classic Notepad's Time/Date shortcut
+    a_time_date   db "F5", 0              ; classic Notepad's Time/Date shortcut
 
     ; --- the detailed action name each accelerator applies to ----------
     ; ("win." for window-scoped actions registered in actions.asm's

@@ -38,15 +38,15 @@ global read_file_to_buffer      ; reused by window.asm's on_open_signal (command
 global finish_save_current_path ; the continuation on_save_activate/on_save_finished (below) and unsaved.asm's Save response all pass to encoding.asm's ensure_encoding_resolved
 global g_current_path           ; reused (read/written) by unsaved.asm and window.asm
 
-extern g_window                  ; main.asm -- parent for the file-picker dialogs, target of gtk_window_set_title
-extern g_buffer                  ; main.asm -- the text buffer New/Open/Save all operate on
-extern clear_dirty                ; unsaved.asm -- called after every successful New/Open/Save so the unsaved-changes prompt won't fire needlessly
-extern g_dirty                     ; unsaved.asm -- read by build_title below to decide whether to prepend the unsaved-changes marker
-extern report_file_error           ; errdlg.asm -- shows an error dialog and logs, called at every open()/lseek()/read()/write() failure below
+extern g_window                      ; main.asm -- parent for the file-picker dialogs, target of gtk_window_set_title
+extern g_buffer                      ; main.asm -- the text buffer New/Open/Save all operate on
+extern clear_dirty                   ; unsaved.asm -- called after every successful New/Open/Save so the unsaved-changes prompt won't fire needlessly
+extern g_dirty                       ; unsaved.asm -- read by build_title below to decide whether to prepend the unsaved-changes marker
+extern report_file_error             ; errdlg.asm -- shows an error dialog and logs, called at every open()/lseek()/read()/write() failure below
 extern reset_encoding_state          ; encoding.asm -- called on New, and internally by decode_and_load_into_buffer on every Open
-extern decode_and_load_into_buffer    ; encoding.asm -- UTF-8 validation/transcoding, called from read_file_to_buffer below
-extern encode_for_save                 ; encoding.asm -- the reverse conversion (if needed), called from write_buffer_to_file below
-extern ensure_encoding_resolved          ; encoding.asm -- gates the actual save behind a Convert/Keep-original prompt if the document's encoding hasn't been settled yet
+extern decode_and_load_into_buffer   ; encoding.asm -- UTF-8 validation/transcoding, called from read_file_to_buffer below
+extern encode_for_save               ; encoding.asm -- the reverse conversion (if needed), called from write_buffer_to_file below
+extern ensure_encoding_resolved      ; encoding.asm -- gates the actual save behind a Convert/Keep-original prompt if the document's encoding hasn't been settled yet
 
 section .rodata
     open_dlg_title  db "Open File", 0
@@ -81,20 +81,20 @@ section .text
 ; -------------------------------------------------------------------------
 strcopy_bounded:
     push rbp                      ; save caller's frame pointer
-    mov  rbp, rsp                  ; establish frame (no locals -- this is a tight byte-copy loop using only its own arguments)
+    mov  rbp, rsp                 ; establish frame (no locals -- this is a tight byte-copy loop using only its own arguments)
 .loop:
     dec  rdx                      ; one fewer byte of budget left
-    jz   .term                     ; hit the max (leaving room for the NUL) -- stop, even if src has more
-    mov  al, [rsi]                 ; al = next source byte
-    test al, al                     ; is it the source's own NUL terminator?
-    jz   .term                      ; yes -- stop, we're done copying real characters
-    mov  [rdi], al                  ; write the byte to dest
-    inc  rdi                        ; advance dest
-    inc  rsi                        ; advance src
-    jmp  .loop                      ; and copy the next byte
+    jz   .term                    ; hit the max (leaving room for the NUL) -- stop, even if src has more
+    mov  al, [rsi]                ; al = next source byte
+    test al, al                   ; is it the source's own NUL terminator?
+    jz   .term                    ; yes -- stop, we're done copying real characters
+    mov  [rdi], al                ; write the byte to dest
+    inc  rdi                      ; advance dest
+    inc  rsi                      ; advance src
+    jmp  .loop                    ; and copy the next byte
 .term:
-    mov  byte [rdi], 0              ; always NUL-terminate dest, whichever way the loop above exited
-    mov  rax, rdi                   ; return value = pointer to that NUL (so a caller can immediately append more text right there)
+    mov  byte [rdi], 0            ; always NUL-terminate dest, whichever way the loop above exited
+    mov  rax, rdi                 ; return value = pointer to that NUL (so a caller can immediately append more text right there)
     pop  rbp
     ret
 

@@ -56,14 +56,16 @@ section .rodata
     ; this was pointed at the parent instead).
     icons_subdir_str   db "/icons", 0
 
-    ; window.ui's GResource path (see ui/ui.gresource.xml's prefix and
-    ; src/resources.asm, which registers the bundle this resolves against)
-    ; and the widget IDs ensure_main_window fetches out of it below.
-    window_ui_resource_path  db "/org/unbloatedpad/Editor/ui/window.ui", 0
-    id_header_bar            db "header_bar", 0
-    id_root_box              db "root_box", 0
-    id_scrolled_window       db "scrolled_window", 0
-    id_text_view             db "text_view", 0
+    ; header_bar.ui/root_box.ui's GResource paths (see ui/ui.gresource.xml's
+    ; prefix and src/resources.asm, which registers the bundle these
+    ; resolve against) and the widget IDs ensure_main_window fetches out of
+    ; them below.
+    header_bar_ui_resource_path  db "/org/unbloatedpad/Editor/ui/header_bar.ui", 0
+    root_box_ui_resource_path    db "/org/unbloatedpad/Editor/ui/root_box.ui", 0
+    id_header_bar                db "header_bar", 0
+    id_root_box                  db "root_box", 0
+    id_scrolled_window           db "scrolled_window", 0
+    id_text_view                 db "text_view", 0
 
 section .bss
     align 8
@@ -237,15 +239,13 @@ ensure_main_window:
     lea  rsi, [rel app_icon_name_str]
     CCALL gtk_window_set_icon_name        ; void gtk_window_set_icon_name(GtkWindow*, const char *name)
 
-    ; --- the header bar, layout box, scrolled window, and text view -----
-    ; all loaded from window.ui (GtkBuilder XML, embedded as a GResource --
-    ; see resources.asm) instead of built widget-by-widget here: every
-    ; property that used to be set with an explicit CCALL below (margins,
-    ; vexpand/hexpand, monospace, wrap-mode, text-view padding, scrollbar
-    ; policy) now lives as a <property> in ui/window.ui instead.
-    sub  rsp, 16                      ; [rbp-16] = the GtkBuilder*, must survive several calls below
+    ; --- the header bar --------------------------------------------------
+    ; loaded from header_bar.ui (GtkBuilder XML, embedded as a GResource --
+    ; see resources.asm), its own file since nothing else needs it built
+    ; alongside root_box below (see ui/header_bar.ui's own comment).
+    sub  rsp, 16                      ; [rbp-16] = the GtkBuilder*, reused below for root_box.ui's builder too (sequentially, never both alive at once)
 
-    lea  rdi, [rel window_ui_resource_path]
+    lea  rdi, [rel header_bar_ui_resource_path]
     CCALL gtk_builder_new_from_resource  ; GtkBuilder *gtk_builder_new_from_resource(const gchar *resource_path) -- aborts loudly if resources.asm's register_app_resources hasn't run yet, which is exactly why main.asm calls that first
     mov  [rbp-16], rax
 
@@ -255,6 +255,18 @@ ensure_main_window:
     mov  rsi, rax                   ; arg2 (for the call below) = the header bar -- captured now, before rdi is reloaded
     mov  rdi, [rel g_window]        ; arg1 = window
     CCALL gtk_window_set_titlebar   ; void gtk_window_set_titlebar(GtkWindow*, GtkWidget*)
+
+    mov  rdi, [rbp-16]
+    CCALL g_object_unref  ; drop our ref on this builder -- header_bar is now owned by the window (via set_titlebar), so it stays alive without it
+
+    ; --- the layout box, scrolled window, and text view -------------------
+    ; loaded from root_box.ui, same reasoning; every property that used to
+    ; be set with an explicit CCALL below (margins, vexpand/hexpand,
+    ; monospace, wrap-mode, text-view padding, scrollbar policy) now lives
+    ; as a <property> in that file instead.
+    lea  rdi, [rel root_box_ui_resource_path]
+    CCALL gtk_builder_new_from_resource
+    mov  [rbp-16], rax    ; reuse the scratch slot -- the header_bar builder above is already unreffed
 
     mov  rdi, [rbp-16]
     lea  rsi, [rel id_root_box]
@@ -280,7 +292,7 @@ ensure_main_window:
     CCALL gtk_window_set_child
 
     mov  rdi, [rbp-16]
-    CCALL g_object_unref  ; drop our ref on the builder -- header_bar (via set_titlebar) and root_box (via set_child, which transitively holds scrolled_window/text_view as its own descendants) are now owned by the window's own widget tree, so they stay alive without it
+    CCALL g_object_unref  ; drop our ref on this builder -- root_box (via set_child, which transitively holds scrolled_window/text_view as its own descendants) is now owned by the window's own widget tree, so it stays alive without it
 
     ; --- actions, accelerators, and the title ----------------------------
     ICALL setup_win_actions    ; actions.asm -- registers every "win.*" GAction

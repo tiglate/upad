@@ -3,15 +3,15 @@
 ; LICENSE at the repo root for the full text.
 
 ; finddlg.asm -- Find, Replace, and Go To Line. Each is a small plain
-; GtkWindow (not modal, transient-for the main window), loaded from
-; ui/finddlg.ui (a GtkBuilder XML file, embedded as a GResource -- see
-; resources.asm) the first time any one of the three is needed, then just
+; GtkWindow (not modal, transient-for the main window), loaded from its
+; own GtkBuilder XML file (find.ui/replace.ui/goto.ui, embedded as a
+; GResource -- see resources.asm) the first time IT SPECIFICALLY is
+; needed (ensure_find_dialog_loaded/ensure_replace_dialog_loaded/
+; ensure_goto_dialog_loaded below, each independent -- opening only Find
+; this session never touches Replace/Go To's files at all), then just
 ; shown/hidden on reuse -- closing one via its titlebar X hides it too
 ; (close-request is intercepted) rather than destroying it, so the same
-; dialog+widgets are reused for the life of the process. All three share
-; one GtkBuilder load (see ensure_finddlg_loaded) rather than each lazily
-; loading its own -- simpler than three separate loads, and harmless since
-; none of them are shown until their own on_*_activate presents them.
+; dialog+widgets are reused for the life of the process.
 ;
 ; The actual search (find_next) walks GtkTextIter/gtk_text_iter_forward_search
 ; directly and always wraps around at end-of-buffer; Replace and Replace
@@ -39,9 +39,12 @@ section .rodata
     sig_key_pressed      db "key-pressed", 0            ; GtkEventControllerKey's signal -- see on_goto_spin_key_pressed/on_find_entry_key_pressed/on_dialog_escape_pressed
     sig_map              db "map", 0                      ; GtkWidget's signal, fired once a dialog is actually mapped by the windowing system -- see on_dialog_map_grab_focus
 
-    ; finddlg.ui's GResource path and the widget IDs fetched out of it by
-    ; ensure_finddlg_loaded below.
-    finddlg_ui_resource_path  db "/org/unbloatedpad/Editor/ui/finddlg.ui", 0
+    ; find.ui/replace.ui/goto.ui's GResource paths and the widget IDs
+    ; fetched out of them by ensure_find_dialog_loaded/
+    ; ensure_replace_dialog_loaded/ensure_goto_dialog_loaded below.
+    find_ui_resource_path     db "/org/unbloatedpad/Editor/ui/find.ui", 0
+    replace_ui_resource_path  db "/org/unbloatedpad/Editor/ui/replace.ui", 0
+    goto_ui_resource_path     db "/org/unbloatedpad/Editor/ui/goto.ui", 0
     id_find_dialog            db "find_dialog", 0
     id_find_entry             db "find_entry", 0
     id_find_next_btn          db "find_next_btn", 0
@@ -60,16 +63,22 @@ section .rodata
 
 section .bss
     align 8
-    ; The GtkBuilder itself, kept alive for the whole process rather than
-    ; unreffed once ensure_finddlg_loaded is done with it: find_dialog/
-    ; replace_dialog/goto_dialog are plain TOPLEVEL GtkWindows, so (unlike
-    ; window.ui's root_box/header_bar, which become the main window's own
-    ; child/titlebar and are kept alive by ITS reference) nothing else
-    ; would hold a reference to them once the builder that constructed
-    ; them goes away. Keeping the builder itself alive is the simplest way
-    ; to guarantee that -- exactly the lifetime these three dialogs need
-    ; anyway (built once, reused for the program's whole life).
-    g_finddlg_builder      resq 1
+    ; Each dialog's own GtkBuilder, kept alive for the whole process rather
+    ; than unreffed once its ensure_*_dialog_loaded is done with it:
+    ; find_dialog/replace_dialog/goto_dialog are plain TOPLEVEL GtkWindows,
+    ; so (unlike root_box.ui/header_bar.ui's contents, which become the
+    ; main window's own child/titlebar and are kept alive by ITS
+    ; reference) nothing else would hold a reference to them once the
+    ; builder that constructed them goes away. Keeping the builder itself
+    ; alive is the simplest way to guarantee that -- exactly the lifetime
+    ; these dialogs need anyway (built once, reused for the program's
+    ; whole life). Three separate builders (one per dialog, each loaded
+    ; independently the first time its own dialog is needed), not one
+    ; shared load -- that's the whole point of splitting find.ui/
+    ; replace.ui/goto.ui apart.
+    g_find_builder         resq 1
+    g_replace_builder      resq 1
+    g_goto_builder         resq 1
     ; Find dialog widgets
     g_find_dialog         resq 1
     g_find_entry           resq 1
@@ -168,8 +177,8 @@ on_dialog_close_request:
 ; void on_dialog_cancel_clicked(GtkButton *button, gpointer user_data)
 ; user_data must be the dialog to hide -- shared by all three dialogs'
 ; Cancel buttons, each connected with its own dialog as user_data (see
-; the g_signal_connect_data calls in ensure_finddlg_loaded below, where
-; rcx is set to the dialog itself, rather than NULL).
+; the g_signal_connect_data calls in each ensure_*_dialog_loaded below,
+; where rcx is set to the dialog itself, rather than NULL).
 on_dialog_cancel_clicked:
     push rbp
     mov  rbp, rsp
@@ -207,8 +216,8 @@ on_dialog_escape_pressed:
     ret
 
 ; void on_dialog_map_grab_focus(GtkWidget *widget, gpointer user_data)
-; Shared "map" handler for all three dialogs (connected once each, in
-; ensure_finddlg_loaded, with user_data = that dialog's primary
+; Shared "map" handler for all three dialogs (connected once each, in its
+; own ensure_*_dialog_loaded, with user_data = that dialog's primary
 ; entry/spin button). gtk_widget_grab_focus's own docs note it silently
 ; does nothing if "its ancestor window is not onscreen" -- which, right
 ; after gtk_window_present() returns, isn't always true yet (the
@@ -448,34 +457,33 @@ do_replace_all:
     ret
 
 ; =========================================================================
-; Loading finddlg.ui and wiring up all three dialogs
+; Loading each dialog -- independent, lazy, one per file
 ; =========================================================================
 
-; void ensure_finddlg_loaded(void) -- loads finddlg.ui (once), fetches
-; every widget all three dialogs need, and wires every signal not already
-; expressed as a static XML property. A no-op on every later call.
-ensure_finddlg_loaded:
+; void ensure_find_dialog_loaded(void) -- loads find.ui (once), fetches
+; find_dialog's widgets, and wires every signal not already expressed as
+; a static XML property. A no-op on every later call.
+ensure_find_dialog_loaded:
     push rbp
     mov  rbp, rsp
-    sub  rsp, 32                  ; [rbp-16] = the GtkBuilder* -- deliberately never unreffed, see g_finddlg_builder's own comment  [rbp-24] = scratch: whichever GtkEventControllerKey we're currently attaching (see the KP_Enter handling below)
+    sub  rsp, 32                  ; [rbp-16] = the GtkBuilder* -- deliberately never unreffed, see g_find_builder's own comment  [rbp-24] = scratch: the KP_Enter/Return-catching GtkEventControllerKey
     mov  rax, [rel g_find_dialog]
     test rax, rax
     jz   .build                    ; not built yet -- fall through
     leave                            ; already built -- nothing to do
     ret
 .build:
-    lea  rdi, [rel finddlg_ui_resource_path]
+    lea  rdi, [rel find_ui_resource_path]
     CCALL gtk_builder_new_from_resource  ; GtkBuilder *gtk_builder_new_from_resource(const gchar *resource_path)
     mov  [rbp-16], rax
-    mov  [rel g_finddlg_builder], rax
+    mov  [rel g_find_builder], rax
 
-    ; --- Find dialog ------------------------------------------------------
     mov  rdi, [rbp-16]
     lea  rsi, [rel id_find_dialog]
     CCALL gtk_builder_get_object  ; GObject *gtk_builder_get_object(GtkBuilder*, const gchar *name)
     mov  [rel g_find_dialog], rax
     mov  rdi, [rel g_find_dialog]
-    ICALL setup_dialog_shell      ; transient-for/modal/close-request
+    ICALL setup_dialog_shell      ; transient-for/modal/close-request/Escape
 
     mov  rdi, [rbp-16]
     lea  rsi, [rel id_find_entry]
@@ -550,7 +558,27 @@ ensure_finddlg_loaded:
     mov  r9d, G_CONNECT_DEFAULT
     CCALL g_signal_connect_data
 
-    ; --- Replace dialog -----------------------------------------------------
+    leave
+    ret
+
+; void ensure_replace_dialog_loaded(void) -- loads replace.ui (once),
+; fetches replace_dialog's widgets, and wires every signal not already
+; expressed as a static XML property. A no-op on every later call.
+ensure_replace_dialog_loaded:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 16                  ; [rbp-16] = the GtkBuilder* -- deliberately never unreffed, see g_replace_builder's own comment
+    mov  rax, [rel g_replace_dialog]
+    test rax, rax
+    jz   .build
+    leave
+    ret
+.build:
+    lea  rdi, [rel replace_ui_resource_path]
+    CCALL gtk_builder_new_from_resource
+    mov  [rbp-16], rax
+    mov  [rel g_replace_builder], rax
+
     mov  rdi, [rbp-16]
     lea  rsi, [rel id_replace_dialog]
     CCALL gtk_builder_get_object
@@ -631,7 +659,27 @@ ensure_finddlg_loaded:
     mov  r9d, G_CONNECT_DEFAULT
     CCALL g_signal_connect_data
 
-    ; --- Go To Line dialog --------------------------------------------------
+    leave
+    ret
+
+; void ensure_goto_dialog_loaded(void) -- loads goto.ui (once), fetches
+; goto_dialog's widgets, and wires every signal not already expressed as
+; a static XML property. A no-op on every later call.
+ensure_goto_dialog_loaded:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 32                  ; [rbp-16] = the GtkBuilder* -- deliberately never unreffed, see g_goto_builder's own comment  [rbp-24] = scratch: the KP_Enter/Return-catching GtkEventControllerKey
+    mov  rax, [rel g_goto_dialog]
+    test rax, rax
+    jz   .build
+    leave
+    ret
+.build:
+    lea  rdi, [rel goto_ui_resource_path]
+    CCALL gtk_builder_new_from_resource
+    mov  [rbp-16], rax
+    mov  [rel g_goto_builder], rax
+
     mov  rdi, [rbp-16]
     lea  rsi, [rel id_goto_dialog]
     CCALL gtk_builder_get_object
@@ -802,7 +850,7 @@ on_find_entry_key_pressed:
 on_find_activate:
     push rbp
     mov  rbp, rsp
-    ICALL ensure_finddlg_loaded          ; build the dialogs if this is the first time
+    ICALL ensure_find_dialog_loaded      ; build the dialog if this is the first time
 
     mov  rdi, [rel g_find_entry]        ; arg1 = the entry
     lea  rsi, [rel g_find_text]           ; arg2 = the remembered search term (possibly empty)
@@ -903,7 +951,7 @@ on_replace_dialog_replace_all:
 on_replace_activate:
     push rbp
     mov  rbp, rsp
-    ICALL ensure_finddlg_loaded
+    ICALL ensure_replace_dialog_loaded  ; build the dialog if this is the first time
 
     mov  rdi, [rel g_replace_find_entry]
     lea  rsi, [rel g_find_text]
@@ -1024,7 +1072,7 @@ on_goto_activate:
     mov  rbp, rsp
     sub  rsp, 96                  ; [rbp-96..-17] = a GtkTextIter (80 bytes)
 
-    ICALL ensure_finddlg_loaded          ; build the dialogs if this is the first time
+    ICALL ensure_goto_dialog_loaded      ; build the dialog if this is the first time
 
     ; --- find the cursor's current line ------------------------------------
     mov  rdi, [rel g_buffer]

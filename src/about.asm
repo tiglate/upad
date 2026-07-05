@@ -17,7 +17,7 @@
 global on_about_activate      ; the "win.about" GAction handler, called from actions.asm's win_actions table
 global on_view_help_activate  ; the "win.view-help" GAction handler, called from actions.asm's win_actions table
 
-extern g_window                 ; main window (main.asm/window.asm) -- About is presented as a child of it, and passed as GtkUriLauncher's parent
+extern g_window               ; main window (main.asm/window.asm) -- About is presented as a child of it, and passed as GtkUriLauncher's parent
 
 section .rodata
     ; this project's GitHub repo -- what Help > View Help opens, and also

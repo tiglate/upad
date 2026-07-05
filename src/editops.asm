@@ -55,7 +55,7 @@ section .text
 ; the widget action name string to invoke -- e.g. for the Undo action,
 ; user_data is a pointer to "text.undo".
 on_textop_activate:
-    push rbp                      ; save caller's frame pointer
+    push rbp                       ; save caller's frame pointer
     mov  rbp, rsp                  ; establish frame (no locals -- everything needed is already in a register or global)
     mov  rdi, [rel g_textview]     ; arg1 = widget = the text view
     mov  rsi, rdx                  ; arg2 = action name = user_data (the incoming 3rd signal arg, rdx) -- e.g. "clipboard.cut"
@@ -93,8 +93,8 @@ register_textop:
     CCALL g_signal_connect_data
 
     ; register it on the window's action map so "win.<name>" resolves to it
-    mov  rdi, [rel g_window]      ; arg1 = action map = main window
-    mov  rsi, [rbp-8]             ; arg2 = the action
+    mov  rdi, [rel g_window]       ; arg1 = action map = main window
+    mov  rsi, [rbp-8]              ; arg2 = the action
     CCALL g_action_map_add_action  ; void g_action_map_add_action(GActionMap*, GAction*) -- takes its own reference
 
     ; drop our own reference -- the window's action map now owns the one that matters
@@ -116,26 +116,26 @@ on_insert_time_date_activate:
 
     ; time_t now = time(NULL)
     xor  edi, edi                 ; arg1 = NULL (we don't need the value written through a pointer -- the return value is enough)
-    CCALL time                     ; time_t time(time_t *tloc) -- rax = current time_t
+    CCALL time                    ; time_t time(time_t *tloc) -- rax = current time_t
     mov  [rbp-8], rax             ; stash it: localtime below needs a *pointer* to a time_t, so it has to live somewhere addressable
 
     ; struct tm *tm = localtime(&now)
     lea  rdi, [rbp-8]             ; arg1 = &now
-    CCALL localtime                ; rax = struct tm* -- points into a static/thread-local buffer glibc owns; we never touch its fields directly, just hand the pointer straight to strftime below
+    CCALL localtime               ; rax = struct tm* -- points into a static/thread-local buffer glibc owns; we never touch its fields directly, just hand the pointer straight to strftime below
     ; rax (the struct tm*) is still valid here -- no call has happened
     ; since localtime returned, so nothing has had a chance to clobber it
 
     ; strftime(buf, 87, "%c", tm)
     lea  rdi, [rbp-96]             ; arg1 = destination buffer
-    mov  esi, 87                    ; arg2 = max size
-    lea  rdx, [rel time_fmt]        ; arg3 = "%c" format string
-    mov  rcx, rax                   ; arg4 = struct tm* (still in rax from localtime, moved into position last since rdi/rsi/rdx don't depend on it)
-    CCALL strftime                   ; size_t strftime(char *s, size_t max, const char *format, const struct tm *tm) -- fills buf, NUL-terminated; return value (length) unused since we pass -1 (NUL-terminated) below rather than an exact count
+    mov  esi, 87                   ; arg2 = max size
+    lea  rdx, [rel time_fmt]       ; arg3 = "%c" format string
+    mov  rcx, rax                  ; arg4 = struct tm* (still in rax from localtime, moved into position last since rdi/rsi/rdx don't depend on it)
+    CCALL strftime                 ; size_t strftime(char *s, size_t max, const char *format, const struct tm *tm) -- fills buf, NUL-terminated; return value (length) unused since we pass -1 (NUL-terminated) below rather than an exact count
 
     ; gtk_text_buffer_insert_at_cursor(buffer, buf, -1)
-    mov  rdi, [rel g_buffer]        ; arg1 = buffer
-    lea  rsi, [rbp-96]              ; arg2 = the formatted text
-    mov  edx, -1                     ; arg3 = len = -1, meaning "NUL-terminated, compute the length yourself"
+    mov  rdi, [rel g_buffer]                 ; arg1 = buffer
+    lea  rsi, [rbp-96]                       ; arg2 = the formatted text
+    mov  edx, -1                             ; arg3 = len = -1, meaning "NUL-terminated, compute the length yourself"
     CCALL gtk_text_buffer_insert_at_cursor   ; void gtk_text_buffer_insert_at_cursor(GtkTextBuffer*, const char *text, int len)
 
     leave

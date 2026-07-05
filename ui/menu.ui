@@ -1,22 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  menu.ui -- the File/Edit/Format/View/Help GMenu model (menu.asm wraps
-  this in a GtkPopoverMenuBar). "_" marks the Alt+X mnemonic, matching
-  classic Notepad convention. Items reference actions by name ("win.foo"
-  against the GtkApplicationWindow's action map, "app.foo" against the
-  GApplication's -- see actions.asm) -- an item pointing at an action that
-  doesn't exist yet is automatically rendered insensitive by GTK.
-
-  Each <section> (no visible label) renders as a horizontal separator
-  between it and its neighbors -- that's the only way a GMenu model
-  produces the classic menu separator line, which is why File and Edit
-  below are each split into several sections instead of one flat list.
-
-  The View submenu carries id="view_menu" so format.asm's
-  relabel_dark_mode_item can keep fetching this same GMenu* (via
-  gtk_builder_get_object in menu.asm) and rewriting the Dark/Light Mode
-  item in place at DARK_MODE_MENU_INDEX (consts.inc).
--->
 <interface>
   <menu id="menubar">
     <submenu>
@@ -51,7 +33,6 @@
       </section>
       <section>
         <item>
-          <!-- "app." prefix, not "win." -- quitting is application-scoped, registered in actions.asm's app_actions table -->
           <attribute name="label">E_xit</attribute>
           <attribute name="action">app.quit</attribute>
         </item>
@@ -117,7 +98,6 @@
     <submenu>
       <attribute name="label">F_ormat</attribute>
       <item>
-        <!-- stateful boolean action (see actions.asm) -- GTK renders this as a checkable item automatically -->
         <attribute name="label">_Word Wrap</attribute>
         <attribute name="action">win.word-wrap</attribute>
       </item>
@@ -130,17 +110,14 @@
     <submenu id="view_menu">
       <attribute name="label">_View</attribute>
       <item>
-        <!-- stateful boolean action -> checkable item -->
         <attribute name="label">_Status Bar</attribute>
         <attribute name="action">win.status-bar</attribute>
       </item>
       <item>
-        <!-- initial label text; format.asm's relabel_dark_mode_item swaps this for "Light _Mode" once dark mode is active (a plain stateless action, not a checkbox -- see format.asm) -->
         <attribute name="label">Dark _Mode</attribute>
         <attribute name="action">win.dark-mode</attribute>
       </item>
       <item>
-        <!-- also a stateful boolean action -> checkable item; kept AFTER Dark Mode so DARK_MODE_MENU_INDEX (consts.inc) doesn't need to change -->
         <attribute name="label">_Line Numbers</attribute>
         <attribute name="action">win.line-numbers</attribute>
       </item>

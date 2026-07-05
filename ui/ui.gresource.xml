@@ -11,8 +11,11 @@
 -->
 <gresources>
   <gresource prefix="/org/unbloatedpad/Editor/ui">
-    <file>window.ui</file>
+    <file>header_bar.ui</file>
+    <file>root_box.ui</file>
     <file>menu.ui</file>
-    <file>finddlg.ui</file>
+    <file>find.ui</file>
+    <file>replace.ui</file>
+    <file>goto.ui</file>
   </gresource>
 </gresources>

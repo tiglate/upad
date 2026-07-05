@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
+<!-- Created with Cambalache 1.0.3 -->
+<cambalache-project version="1.0.0" target_tk="gtk-4.0" depends="libadwaita-1">
+  <ui filename="ui/find.ui" sha256="9f5486d72dde793783a9ac7af305557a84b8eed8ef05785a5c45036e0ea99890"/>
+  <ui filename="ui/goto.ui" sha256="34a5fe0bf28246376fc4abde62f84a0e387b966cc0da334f8ab4ee195fc5d87f"/>
+  <ui filename="ui/header_bar.ui" sha256="80f1b6e8024546621f68c8690aa3b0b7d88fde0afc48395fcc20901096e7f12c"/>
+  <ui filename="ui/menu.ui" sha256="15a92989ff145d35d19026069de7683b1fdca5201cb0ef2e5ca823eabc9e74c8"/>
+  <ui filename="ui/replace.ui" sha256="ecaf2db9a9b702ac7518b6ab4f724ae742964c46b012a2c919ad5b24ccb512b3"/>
+  <ui filename="ui/root_box.ui" sha256="9abfc829268f20e5466988c3d0556916c22a2661e04f5055dd3b558a1b0b65e2"/>
+</cambalache-project>
