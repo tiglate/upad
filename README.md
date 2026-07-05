@@ -64,6 +64,9 @@ Plus the details that make it feel like a real app, not a toy:
 - 🌗 **Dark Mode**, a live "Ln X, Col Y" status bar, and all the
   keyboard shortcuts you'd expect (`Ctrl+N/O/S`, `Ctrl+Shift+S`, `Ctrl+F`,
   `F3`, `Ctrl+H`, `Ctrl+G`, `F5`, ...).
+- 🗣️ **Translated** into Brazilian Portuguese, Spanish, and Italian (on
+  top of English), via GNU gettext — follows your desktop's own locale
+  automatically, no in-app language switcher needed.
 
 ## 👤 Author
 
@@ -85,11 +88,15 @@ no code shared between the two.
   APIs introduced in GTK 4.10 and libadwaita 1.5
 - **uchardet development headers** (`libuchardet-dev`) — charset
   detection when opening a non-UTF-8 file
+- **`gettext`** (`msgfmt`) — compiles `po/*.po` into the `.mo` catalogs
+  behind the translations above; build-time only, no new runtime link
+  dependency (`setlocale`/`bindtextdomain`/`gettext` are all already
+  built into glibc)
 
 On Debian/Ubuntu/Zorin:
 
 ```bash
-sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev
+sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev gettext
 ```
 
 ## 🔨 Build
@@ -114,6 +121,15 @@ memory at runtime. `make release` does a clean rebuild and strips it —
 repo root — not the Makefile, not any `.asm` file. It feeds both `.deb`
 packaging and the About dialog (via a small generated `build/version.inc`
 `src/about.asm` includes). Bump it by editing `.version`, nothing else.
+
+🗣️ `make` also compiles `po/*.po` into `locale/<lang>/LC_MESSAGES/upad.mo`
+(gitignored, same status as `build/`) — that's where an uninstalled dev
+build looks them up. After adding/changing a translatable string, `make
+pot` regenerates `po/upad.pot` (`xgettext --language=Glade` over `ui/*.ui`
+merged with `scripts/extract-asm-strings.py`'s hand-rolled scan of
+`src/*.asm`'s `; i18n:`-marked strings, since `xgettext` has no NASM
+support); then `msgmerge --update po/<lang>.po po/upad.pot` per language
+and fill in whatever's new.
 
 ### 🩹 Troubleshooting
 
@@ -184,6 +200,7 @@ crammed together:
 | `unsaved.asm` | Tracks unsaved changes; interposes a Save/Discard/Cancel prompt in front of New/Open/Quit/window-close |
 | `about.asm` | Help > View Help (opens this repo) and Help > About, via `AdwAboutDialog` (version field from generated `build/version.inc`) |
 | `accels.asm` | Keyboard accelerators (`Ctrl+N`, `F3`, ...) for actions with no built-in GTK binding |
+| `i18n.asm` | 🗣️ One-time GNU gettext startup setup (`setlocale`/`bindtextdomain`/`textdomain`), called first in `main()` |
 | `consts.inc` | Every enum/flag/struct-layout constant, each sourced from the installed system headers (see the comment above each block) |
 | `extern.inc` | `extern` declarations for every GTK/GLib/libadwaita/Pango/cairo/libc function called from assembly |
 | `callconv.inc` | The System V AMD64 calling-convention discipline every function follows (see below) |
@@ -258,6 +275,10 @@ re-verify with a two-line C program before trusting these constants.
 - 🔢 The line-numbers gutter always draws in a fixed mid-gray, not a
   theme-aware color — chosen to stay readable in both light and dark mode
   without extra plumbing.
+- 🗣️ **Translations follow the system locale only** — there's no in-app
+  language menu/setting; override via `LANGUAGE=pt_BR ./upad` (also `es`,
+  `it`) for testing a specific one regardless of your actual desktop
+  locale.
 
 ---
 

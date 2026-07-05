@@ -49,15 +49,15 @@ extern encode_for_save               ; encoding.asm -- the reverse conversion (i
 extern ensure_encoding_resolved      ; encoding.asm -- gates the actual save behind a Convert/Keep-original prompt if the document's encoding hasn't been settled yet
 
 section .rodata
-    open_dlg_title  db "Open File", 0
-    save_dlg_title  db "Save File As", 0
-    untitled_str    db "Untitled - UnbloatedPad", 0   ; window title when there's no current file
-    title_suffix    db " - UnbloatedPad", 0            ; appended after a filename
+    open_dlg_title  db "Open File", 0  ; i18n:
+    save_dlg_title  db "Save File As", 0  ; i18n:
+    untitled_str    db "Untitled", 0   ; i18n: window title (before title_suffix, NOT translated -- brand name) when there's no current file
+    title_suffix    db " - UnbloatedPad", 0            ; appended after a filename or untitled_str -- deliberately NOT translatable (brand name)
     empty_str       db 0                                ; New needs *some* non-NULL pointer for "clear the buffer", even though the length passed is 0
 
-    err_msg_open    db "Could not open file", 0          ; read_file_to_buffer's open() failed
-    err_msg_read    db "Could not read file", 0           ; read_file_to_buffer's lseek()/read() failed after a successful open()
-    err_msg_save    db "Could not save file", 0            ; write_buffer_to_file's open()/write() failed
+    err_msg_open    db "Could not open file", 0  ; i18n: read_file_to_buffer's open() failed
+    err_msg_read    db "Could not read file", 0  ; i18n: read_file_to_buffer's lseek()/read() failed after a successful open()
+    err_msg_save    db "Could not save file", 0  ; i18n: write_buffer_to_file's open()/write() failed
 
     ; U+25CF BLACK CIRCLE (UTF-8: E2 97 8F) + a trailing space, prepended to
     ; the window title while unsaved.asm's g_dirty is set; written as raw
@@ -131,9 +131,19 @@ build_title:
     mov  rax, [rbp-8]              ; was a basename given at all?
     test rax, rax
     jnz  .have_name                 ; yes -- go build "<basename> - UnbloatedPad"
-    ; --- no file yet: just "Untitled - UnbloatedPad" -------------------
-    lea  rsi, [rel untitled_str]     ; src = "Untitled - UnbloatedPad"
+    ; --- no file yet: "Untitled" (translated) + " - UnbloatedPad" (the
+    ; brand name in title_suffix stays fixed across every language, same
+    ; as the has-a-name path just below) ---------------------------------
+    mov  [rbp-8], rdi               ; stash dest (currently either the buffer start or right after the marker) -- basename_or_null, NULL on this path, is no longer needed
+    lea  rdi, [rel untitled_str]   ; arg1 = msgid = "Untitled"
+    CCALL gettext
+    mov  rsi, rax                    ; src = the translated word
+    mov  rdi, [rbp-8]                  ; dest = restored
     mov  rdx, TITLE_BUF_SIZE          ; max = the whole buffer's size (generous fixed budget, same reasoning as below)
+    ICALL strcopy_bounded
+    mov  rdi, rax                        ; dest = continue right after "Untitled"
+    lea  rsi, [rel title_suffix]           ; src = " - UnbloatedPad"
+    mov  rdx, 32
     ICALL strcopy_bounded
     lea  rax, [rel g_title_buf]       ; return value = pointer to the buffer (strcopy_bounded's own return, the NUL position, isn't what callers of build_title want -- they want the start of the string)
     jmp  .done
@@ -274,9 +284,11 @@ read_file_to_buffer:
     CCALL __errno_location                ; int *__errno_location(void) -- capture errno now, even though there's nothing to clean up on this path yet, to keep the same shape as the branches below
     mov  eax, [rax]
     mov  [rbp-40], eax
-    lea  rdi, [rel err_msg_open]            ; arg1 = op_summary
-    mov  rsi, [rbp-32]                        ; arg2 = path
-    mov  edx, [rbp-40]                          ; arg3 = saved errno
+    lea  rdi, [rel err_msg_open]  ; arg1 = msgid
+    CCALL gettext
+    mov  rdi, rax                   ; arg1 = translated op_summary
+    mov  rsi, [rbp-32]                ; arg2 = path (fresh from its own stack slot, untouched by the gettext call above)
+    mov  edx, [rbp-40]                  ; arg3 = saved errno (same)
     ICALL report_file_error
     jmp  .done
 
@@ -286,9 +298,11 @@ read_file_to_buffer:
     mov  [rbp-40], eax
     mov  edi, [rbp-8]
     CCALL close
-    lea  rdi, [rel err_msg_read]
-    mov  rsi, [rbp-32]
-    mov  edx, [rbp-40]
+    lea  rdi, [rel err_msg_read]  ; arg1 = msgid
+    CCALL gettext
+    mov  rdi, rax                   ; arg1 = translated op_summary
+    mov  rsi, [rbp-32]                ; arg2 = path
+    mov  edx, [rbp-40]                  ; arg3 = saved errno
     ICALL report_file_error
     jmp  .done
 
@@ -300,9 +314,11 @@ read_file_to_buffer:
     CCALL g_free
     mov  edi, [rbp-8]
     CCALL close
-    lea  rdi, [rel err_msg_read]
-    mov  rsi, [rbp-32]
-    mov  edx, [rbp-40]
+    lea  rdi, [rel err_msg_read]  ; arg1 = msgid
+    CCALL gettext
+    mov  rdi, rax                   ; arg1 = translated op_summary
+    mov  rsi, [rbp-32]                ; arg2 = path
+    mov  edx, [rbp-40]                  ; arg3 = saved errno
     ICALL report_file_error
 .done:
     leave
@@ -398,9 +414,11 @@ write_buffer_to_file:
     mov  [rbp-200], eax
     mov  rdi, [rbp-24]                            ; still own `text`, must free it regardless of the open failure
     CCALL g_free
-    lea  rdi, [rel err_msg_save]                    ; arg1 = op_summary
-    mov  rsi, [rbp-8]                                 ; arg2 = path
-    mov  edx, [rbp-200]                                ; arg3 = saved errno
+    lea  rdi, [rel err_msg_save]  ; arg1 = msgid
+    CCALL gettext
+    mov  rdi, rax                   ; arg1 = translated op_summary
+    mov  rsi, [rbp-8]                 ; arg2 = path
+    mov  edx, [rbp-200]                 ; arg3 = saved errno
     ICALL report_file_error
     jmp  .done
 
@@ -412,9 +430,11 @@ write_buffer_to_file:
     CCALL close
     mov  rdi, [rbp-24]
     CCALL g_free
-    lea  rdi, [rel err_msg_save]
-    mov  rsi, [rbp-8]
-    mov  edx, [rbp-200]
+    lea  rdi, [rel err_msg_save]  ; arg1 = msgid
+    CCALL gettext
+    mov  rdi, rax                   ; arg1 = translated op_summary
+    mov  rsi, [rbp-8]                 ; arg2 = path
+    mov  edx, [rbp-200]                 ; arg3 = saved errno
     ICALL report_file_error
 
 .done:
@@ -466,8 +486,10 @@ on_open_activate:
     CCALL gtk_file_dialog_new       ; GtkFileDialog *gtk_file_dialog_new(void)
     mov  [rbp-8], rax
 
-    mov  rdi, [rbp-8]                ; arg1 = self
-    lea  rsi, [rel open_dlg_title]    ; arg2 = "Open File"
+    lea  rdi, [rel open_dlg_title]  ; arg1 = msgid
+    CCALL gettext
+    mov  rsi, rax                     ; arg2 = translated title
+    mov  rdi, [rbp-8]                    ; arg1 = self
     CCALL gtk_file_dialog_set_title
 
     mov  rdi, [rbp-8]                 ; arg1 = self
@@ -575,8 +597,10 @@ on_save_as_activate:
     CCALL gtk_file_dialog_new
     mov  [rbp-8], rax
 
-    mov  rdi, [rbp-8]                 ; arg1 = self
-    lea  rsi, [rel save_dlg_title]     ; arg2 = "Save File As"
+    lea  rdi, [rel save_dlg_title]  ; arg1 = msgid
+    CCALL gettext
+    mov  rsi, rax                     ; arg2 = translated title
+    mov  rdi, [rbp-8]                    ; arg1 = self
     CCALL gtk_file_dialog_set_title
 
     mov  rdi, [rbp-8]                  ; arg1 = self

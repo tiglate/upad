@@ -5,28 +5,23 @@
 ; statusbar.asm -- the "Ln X, Col Y" status bar (plain GtkLabel, updated
 ; whenever the cursor moves) and its View > Status Bar visibility toggle.
 
-%include "consts.inc"          ; GTK_ALIGN_START, G_CONNECT_DEFAULT, STATUS_BUF_SIZE
+%include "consts.inc"          ; GTK_ALIGN_START, G_CONNECT_DEFAULT
 %include "callconv.inc"        ; CCALL/ICALL macros
-%include "extern.inc"          ; extern gtk_label_new/gtk_label_set_text/gtk_text_buffer_get_iter_at_mark/gtk_text_iter_get_line(_offset)/g_signal_connect_data
+%include "extern.inc"          ; extern gtk_label_new/gtk_label_set_text/gtk_text_buffer_get_iter_at_mark/gtk_text_iter_get_line(_offset)/g_signal_connect_data/gettext/g_strdup_printf/g_free
 
 global build_statusbar          ; called once from window.asm, returns the label widget to pack into the layout
 global on_status_bar_activate   ; the "win.status-bar" GAction handler, registered in actions.asm
 
 extern g_buffer                  ; main.asm -- we read the cursor position from here
-extern strcopy_bounded           ; fileio.asm -- bounded string copy, reused here for building "Ln X, Col Y"
-extern itoa_decimal              ; format.asm -- decimal integer-to-string, reused here for the line/column numbers
 extern toggle_bool_action        ; format.asm -- shared "flip a stateful boolean GSimpleAction" helper
 
 section .rodata
     sig_notify_cursor db "notify::cursor-position", 0   ; GtkTextBuffer's own "cursor-position" GObject property change notification -- fires on every caret move, not just every keystroke
-    status_initial    db "Ln 1, Col 1", 0                ; the label's text before the first cursor-move signal ever fires
-    status_prefix     db "Ln ", 0
-    status_mid        db ", Col ", 0
+    status_fmt        db "Ln %d, Col %d", 0             ; i18n: printf-style format fed through gettext, then g_strdup_printf, for both the real cursor position and the initial "Ln 1, Col 1"
 
 section .bss
     align 8
     g_status_label resq 1                  ; GtkLabel* -- the status bar widget itself
-    g_status_buf   resb STATUS_BUF_SIZE     ; scratch buffer update_status_label formats "Ln X, Col Y" into before handing it to gtk_label_set_text
 
 section .text
 
@@ -60,30 +55,41 @@ update_status_label:
     inc  eax                                ; -> 1-based
     mov  [rbp-16], rax
 
-    ; --- format "Ln <line>, Col <col>" into g_status_buf --------------
-    ; Each strcopy_bounded/itoa_decimal call returns a pointer to where
-    ; it left off (the freshly-written NUL), which becomes the `dest` for
-    ; the next call -- this is what lets the four calls below chain into
-    ; one contiguous string without ever computing an offset by hand.
-    lea  rdi, [rel g_status_buf]           ; dest = start of the scratch buffer
-    lea  rsi, [rel status_prefix]          ; src = "Ln "
-    mov  rdx, 16                            ; max -- "Ln " is 4 bytes incl. NUL, 16 is a comfortable bound
-    ICALL strcopy_bounded                   ; rax = pointer to the NUL just written, i.e. right after "Ln "
-    mov  rdi, rax                           ; dest = continue right there
-    mov  esi, [rbp-8]                        ; value = the line number (32-bit load -- itoa_decimal's `esi` parameter is a plain int)
-    ICALL itoa_decimal                       ; writes the line number's digits, returns pointer to the new NUL
-    mov  rdi, rax                            ; dest = continue after the digits
-    lea  rsi, [rel status_mid]               ; src = ", Col "
-    mov  rdx, 16
-    ICALL strcopy_bounded
-    mov  rdi, rax                            ; dest = continue after ", Col "
-    mov  esi, [rbp-16]                        ; value = the column number
-    ICALL itoa_decimal                        ; writes the column digits + final NUL; return value unused (nothing appended after it)
+    ; --- format and push "Ln <line>, Col <col>" into the label ---------
+    mov  edi, [rbp-8]     ; arg1 = line
+    mov  esi, [rbp-16]    ; arg2 = col
+    ICALL format_set_status_label
 
-    ; --- push the finished string into the label widget ----------------
-    mov  rdi, [rel g_status_label]           ; arg1 = the GtkLabel
-    lea  rsi, [rel g_status_buf]              ; arg2 = the string just built
-    CCALL gtk_label_set_text                   ; void gtk_label_set_text(GtkLabel*, const char*)
+    leave
+    ret
+
+; void format_set_status_label(gint line, gint col)
+; Formats "Ln <line>, Col <col>" via a translatable printf-style format
+; string and pushes the result into the status label. Shared by
+; update_status_label (the real cursor position) and build_statusbar (the
+; initial "Ln 1, Col 1" shown before the first cursor-move signal ever
+; fires) so there's exactly one place that knows the label's wording.
+format_set_status_label:
+    push rbp
+    mov  rbp, rsp
+    sub  rsp, 32          ; [rbp-8]=line [rbp-16]=col [rbp-24]=g_strdup_printf's freshly-allocated string
+    mov  [rbp-8], edi
+    mov  [rbp-16], esi
+
+    lea  rdi, [rel status_fmt]  ; arg1 = msgid
+    CCALL gettext                 ; rax = the translated format string (or status_fmt itself, unchanged, if untranslated)
+    mov  rdi, rax                  ; arg1 = format
+    mov  esi, [rbp-8]                ; arg2 = line
+    mov  edx, [rbp-16]                ; arg3 = col
+    CCALL g_strdup_printf              ; gchar *g_strdup_printf(const gchar *format, ...) -- owned, must g_free below
+    mov  [rbp-24], rax
+
+    mov  rdi, [rel g_status_label]   ; arg1 = the GtkLabel
+    mov  rsi, [rbp-24]                 ; arg2 = the formatted string
+    CCALL gtk_label_set_text             ; void gtk_label_set_text(GtkLabel*, const char*) -- copies the text, doesn't take ownership
+
+    mov  rdi, [rbp-24]
+    CCALL g_free
 
     leave
     ret
@@ -107,9 +113,13 @@ build_statusbar:
     ; rsp is 16-aligned here (entry 8, -8 for push rbp = 0); no locals
     ; needed -- g_status_label is written straight to its .bss global.
 
-    lea  rdi, [rel status_initial]        ; arg1 = "Ln 1, Col 1"
+    xor  edi, edi                            ; arg1 = NULL -- start empty, format_set_status_label below fills in the real (translated) text
     CCALL gtk_label_new                     ; GtkWidget *gtk_label_new(const char *str)
     mov  [rel g_status_label], rax          ; stash globally -- update_status_label, on_status_bar_activate, and window.asm's packing code all need this later
+
+    mov  edi, 1                              ; arg1 = line 1
+    mov  esi, 1                              ; arg2 = col 1 -- the label's text before the first cursor-move signal ever fires
+    ICALL format_set_status_label
 
     mov  rdi, [rel g_status_label]
     mov  esi, GTK_ALIGN_START               ; left-align the text within the label (default is centered, which looks wrong for a status bar)

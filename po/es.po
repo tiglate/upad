@@ -1,0 +1,265 @@
+# Spanish translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-05 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: es\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "Buscar"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "Buscar:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "Buscar _siguiente"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "_Cancelar"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "Ir a la línea"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "Número de línea:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_Aceptar"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_Archivo"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_Nuevo"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_Abrir..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "_Guardar"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "Guardar _como..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "Config_urar página..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "Im_primir..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "Sali_r"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_Edición"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "_Deshacer"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "Cor_tar"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "_Copiar"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "_Pegar"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "E_liminar"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_Buscar..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "Buscar _siguiente"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "_Reemplazar..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "_Ir a..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "Seleccionar _todo"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "Hora/_fecha"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "F_ormato"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "_Ajuste de línea"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "_Fuente..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_Ver"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "_Barra de estado"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "_Modo oscuro"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_Números de línea"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "Ay_uda"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "_Ver ayuda"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_Acerca de UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "Reemplazar"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "Reemplazar con:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "_Reemplazar"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "Reemplazar _todo"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "Una recreación del clásico Bloc de notas para Linux, escrita íntegramente en ensamblador x86-64 puro, sobre la ABI en C de GTK4 y libadwaita (sin código auxiliar en C). Creado por Tiglate Pileser III (tiglate) con asistencia de IA."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "¿Guardar en la codificación original?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "Este archivo no se abrió como texto UTF-8. Elija si desea guardarlo de nuevo en su codificación original o convertir el documento a UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_Mantener codificación original"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "_Convertir a UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "No se pudo abrir el archivo"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "El contenido de este archivo no parece texto UTF-8 o UTF-16 válido, y uchardet no pudo identificar (o adivinó mal) la codificación heredada de 8 bits que pudiera ser."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "No se pudo guardar el archivo"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "Este documento contiene caracteres que no se pueden convertir de nuevo a la codificación con la que se abrió originalmente. No se guardó nada -- inténtelo de nuevo y elija convertir a UTF-8."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "Abrir archivo"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "Guardar archivo como"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "Sin título"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "No se pudo leer el archivo"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "_Modo claro"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "Documento de UnbloatedPad"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "No se pudo imprimir"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "No se pudo completar el trabajo de impresión. Compruebe la conexión de la impresora e inténtelo de nuevo."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "Lín %d, Col %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "¿Guardar los cambios?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "Este documento tiene cambios sin guardar. Si cierra sin guardar, esos cambios se perderán."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_Descartar"

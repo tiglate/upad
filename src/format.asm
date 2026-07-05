@@ -36,8 +36,8 @@ section .rodata
     css_prefix          db 'textview { font-family: "', 0
     css_middle          db '"; font-size: ', 0
     css_suffix          db 'pt               ; }', 0
-    lbl_dark_mode       db "Dark _Mode", 0   ; shown while currently light (click to go dark)
-    lbl_light_mode      db "Light _Mode", 0  ; shown while currently dark (click to go light)
+    lbl_dark_mode       db "Dark _Mode", 0   ; i18n: shown while currently light (click to go dark)
+    lbl_light_mode      db "Light _Mode", 0  ; i18n: shown while currently dark (click to go light)
     act_dark_mode_detail db "win.dark-mode", 0
     default_font_str    db "Monospace 11", 0            ; opened when Format > Font... has never been used yet this run
 
@@ -162,9 +162,19 @@ on_word_wrap_activate:
 relabel_dark_mode_item:
     push rbp
     mov  rbp, rsp
-    ; no locals needed -- everything below is a global or an immediate,
-    ; and the two calls (remove, then insert) don't need anything from
-    ; each other beyond g_view_menu/DARK_MODE_MENU_INDEX themselves
+    sub  rsp, 16                     ; [rbp-8] = the translated label, needed across the g_menu_remove call below
+
+    ; --- decide + translate which label to offer, before touching the menu at all ---
+    mov  rax, [rel g_dark_mode_on]  ; which label matches "currently dark" vs "currently light"?
+    test rax, rax
+    jz   .translate_dark              ; currently light -> offer "Dark Mode" (the action a click takes)
+    lea  rdi, [rel lbl_light_mode]  ; arg1 = msgid -- currently dark -> offer "Light Mode"
+    jmp  .translate
+.translate_dark:
+    lea  rdi, [rel lbl_dark_mode]   ; arg1 = msgid
+.translate:
+    CCALL gettext
+    mov  [rbp-8], rax                 ; stash the translated label across the two calls below
 
     mov  rdi, [rel g_view_menu]     ; arg1 = the View GMenu
     mov  esi, DARK_MODE_MENU_INDEX  ; arg2 = position = 1 (Status Bar is 0)
@@ -172,18 +182,11 @@ relabel_dark_mode_item:
 
     mov  rdi, [rel g_view_menu]     ; arg1 = the View GMenu (same menu, now one item shorter at this index)
     mov  esi, DARK_MODE_MENU_INDEX  ; arg2 = position = 1 again -- re-insert at the same spot
-    mov  rax, [rel g_dark_mode_on]  ; which label matches "currently dark" vs "currently light"?
-    test rax, rax
-    jz   .relabel_dark              ; currently light -> offer "Dark Mode" (the action a click takes)
-    lea  rdx, [rel lbl_light_mode]  ; currently dark -> offer "Light Mode"
-    jmp  .relabel
-.relabel_dark:
-    lea  rdx, [rel lbl_dark_mode]
-.relabel:
+    mov  rdx, [rbp-8]                 ; arg3 = the translated label
     lea  rcx, [rel act_dark_mode_detail]  ; arg4 = detailed action name = "win.dark-mode" (unchanged either way -- only the label text differs)
     CCALL g_menu_insert                   ; void g_menu_insert(GMenu*, gint position, const gchar *label, const gchar *detailed_action)
 
-    pop  rbp
+    leave
     ret
 
 ; void init_dark_mode_state(void) -- call once at startup, after the menu

@@ -2,3 +2,4 @@
 build/
 upad
 *.deb
+locale/

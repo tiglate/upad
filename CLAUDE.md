@@ -51,9 +51,13 @@ on that release via `gh release upload`.
 
 Requires: `nasm`, `gcc`, `pkg-config`, `libgtk-4-dev`, `libadwaita-1-dev`
 (>= 1.5, for GTK 4.10-era Font/Find/Replace/Go To dialog APIs), `libuchardet-dev`
-(charset detection, `encoding.asm`). If `pkg-config` can't find
-`gtk4`/`libadwaita-1`/`uchardet` even though installed, point
-`PKG_CONFIG_PATH` at wherever `find /usr/lib -name 'gtk4.pc'` turns up.
+(charset detection, `encoding.asm`), and the `gettext` package (`msgfmt`,
+build-time only -- `xgettext`/`msgcat` are only needed for `make pot`, see
+below; there's no new *runtime* link dependency, since `setlocale`/
+`bindtextdomain`/`gettext` etc. are all built into glibc directly). If
+`pkg-config` can't find `gtk4`/`libadwaita-1`/`uchardet` even though
+installed, point `PKG_CONFIG_PATH` at wherever `find /usr/lib -name
+'gtk4.pc'` turns up.
 
 To debug a build failure of the form `ld: relocation ... in read-only
 section '.text'` / `undefined reference`: a symbol called with `ICALL` (see
@@ -84,6 +88,7 @@ together, unlike the original):
 | `unsaved.asm` | Tracks unsaved changes; interposes a Save/Discard/Cancel prompt in front of New/Open/Quit/window-close |
 | `about.asm` | Help > About, via `AdwAboutDialog` (version field from generated `build/version.inc`, see above) |
 | `accels.asm` | Keyboard accelerators (`Ctrl+N`, `F3`, ...) for actions with no built-in GTK binding |
+| `i18n.asm` | One-time GNU gettext startup setup (`setup_i18n`, called first in `main()`) -- see "Internationalization (i18n)" below |
 | `consts.inc` | Every enum/flag/struct-layout constant, each sourced from the installed system headers (comment above each block names the header) |
 | `extern.inc` | `extern` declarations for every GTK/GLib/libadwaita/libc function called from assembly |
 | `callconv.inc` | The calling-convention discipline every function follows (below) |
@@ -138,6 +143,48 @@ re-verify with a small C program before trusting these constants.
   *why*, not just what — match this density when adding code.
 - `consts.inc` entries always cite the system header they were checked
   against; do the same for any new constant.
+
+## Internationalization (i18n)
+
+Built on GNU gettext + GLib, following the system locale (`$LANG`/
+`$LANGUAGE`) -- there's no in-app language switcher/settings subsystem.
+Test a specific language with `LANGUAGE=pt_BR ./upad` (also `es`, `it`)
+without needing that locale actually installed on the system.
+
+- Every user-visible string in `src/*.asm` is a plain `db "...", 0` marked
+  with a trailing `; i18n:` comment (optionally followed by a note, e.g.
+  `; i18n: proper noun, deliberately NOT translated`); its use site wraps
+  it with `CCALL gettext` before handing it to whatever GTK/GLib/
+  libadwaita setter consumes it. Proper nouns (app name, developer name,
+  URLs) are deliberately left unmarked/untranslated.
+- `gettext(...)` clobbers every caller-saved register (SysV convention),
+  so its call always runs *before* the other arguments of the call it's
+  feeding are loaded into their registers -- reusing an already-dead
+  stack slot to stash its result across a second `gettext` call where
+  more than one string needs translating for the same GTK/libadwaita call
+  (see e.g. `unsaved.asm`'s `request_close` or `encoding.asm`'s
+  `ensure_encoding_resolved`).
+- `ui/*.ui`'s own translatable strings just need `translatable="yes"` on
+  the property/attribute (GtkBuilder translates them automatically
+  against the domain `i18n.asm`'s `textdomain()` call sets up -- no
+  per-`GtkBuilder` call needed).
+- `.mo` catalogs are plain filesystem files, not GResource-embedded (glibc's
+  `gettext()` has no GResource awareness) -- same precedent as `icons/`,
+  not the `ui/`-GResource one. `src/i18n.asm`'s `setup_i18n` binds the
+  `"upad"` domain to `<exe_dir>/locale` for an uninstalled dev build
+  (`make && ./upad`, generated at `locale/<lang>/LC_MESSAGES/upad.mo`,
+  gitignored) but skips `bindtextdomain` entirely for an installed build,
+  letting glibc fall back to its own compiled-in default
+  (`$(PREFIX)/share/locale/...`, populated by `make install`/the `.deb`).
+- xgettext has no NASM support, so `scripts/extract-asm-strings.py` scans
+  `src/*.asm` by hand for the `; i18n:` convention above and emits a
+  `.pot` fragment; `make pot` merges that with `xgettext
+  --language=Glade`'s own extraction from `ui/*.ui` (which handles both
+  `<property translatable="yes">` and GMenu `<attribute
+  translatable="yes">` natively) via `msgcat`, writing `po/upad.pot`.
+  After changing/adding a translatable string: `make pot`, then
+  `msgmerge --update po/<lang>.po po/upad.pot` for each of `po/pt_BR.po`,
+  `po/es.po`, `po/it.po`, then fill in any new/fuzzy entries by hand.
 
 ## Known limitations (don't "fix" without being asked)
 
