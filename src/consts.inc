@@ -176,6 +176,3 @@ CHARSET_NAME_SIZE          equ 32
 
 ; ---- locale.h: setlocale() category (i18n.asm) --------------------------
 LC_ALL  equ 6
-
-; ---- unistd.h: access() mode bit (i18n.asm's dev-build locale dir check) --
-F_OK  equ 0

@@ -28,9 +28,9 @@
 ; domain textdomain() sets here -- no per-GtkBuilder-instance call needed
 ; in window.asm/menu.asm/finddlg.asm.
 
-%include "consts.inc"    ; LC_ALL, F_OK, EXE_PATH_BUF_SIZE
+%include "consts.inc"    ; LC_ALL, EXE_PATH_BUF_SIZE
 %include "callconv.inc"  ; CCALL/ICALL macros
-%include "extern.inc"    ; extern setlocale/bindtextdomain/bind_textdomain_codeset/textdomain/access/readlink
+%include "extern.inc"    ; extern setlocale/bindtextdomain/bind_textdomain_codeset/textdomain/readlink/opendir/closedir
 
 global setup_i18n  ; called once from main.asm, before anything else
 
@@ -96,19 +96,30 @@ setup_i18n:
     mov  rdx, 32
     ICALL strcopy_bounded              ; fileio.asm -- bounded append, same reuse as register_icon_search_path
 
-    ; --- only bindtextdomain if <exe dir>/locale actually exists ----------
-    ; (unlike GtkIconTheme's search path, which tolerates a nonexistent
-    ; extra entry just fine, bindtextdomain REPLACES the one location
-    ; gettext looks in for this domain -- pointing it at a dev-tree
-    ; directory that doesn't exist would break an INSTALLED build, which
-    ; relies on never calling this at all so gettext falls back to the
-    ; compiled-in system default, e.g. /usr/share/locale, where `make
-    ; install`/the .deb actually put the compiled .mo files)
+    ; --- only bindtextdomain if <exe dir>/locale actually EXISTS AS A ------
+    ;     DIRECTORY (unlike GtkIconTheme's search path, which tolerates a
+    ; nonexistent extra entry just fine, bindtextdomain REPLACES the one
+    ; location gettext looks in for this domain -- pointing it at a
+    ; dev-tree directory that doesn't exist would break an INSTALLED
+    ; build, which relies on never calling this at all so gettext falls
+    ; back to the compiled-in system default, e.g. /usr/share/locale,
+    ; where `make install`/the .deb actually put the compiled .mo files).
+    ; A plain existence check (e.g. access(F_OK)) isn't enough: an
+    ; installed build's own <exe_dir> is /usr/bin, so <exe_dir>/locale is
+    ; /usr/bin/locale -- which just so happens to be the path of the
+    ; real, unrelated `locale(1)` command binary shipped by every glibc
+    ; system (part of libc-bin/locales), NOT a directory. access(F_OK)
+    ; would see that path exists and wrongly bindtextdomain us to it,
+    ; silently breaking every translation for an installed build (the
+    ; bug this comment is here to prevent regressing). opendir() instead
+    ; fails (NULL, ENOTDIR) on that same path, since it isn't a
+    ; directory, correctly falling through to the system default below.
     lea  rdi, [rel g_locale_dir_buf]
-    mov  esi, F_OK
-    CCALL access                        ; int access(const char *pathname, int mode) -- 0 if it exists, -1 otherwise
-    test eax, eax
-    jnz  .skip_bindtextdomain
+    CCALL opendir                       ; DIR *opendir(const char*) -- NULL if it doesn't exist, or exists but isn't a directory
+    test rax, rax
+    jz   .skip_bindtextdomain
+    mov  rdi, rax
+    CCALL closedir                      ; just needed the existence-and-is-a-directory check above; nothing to keep open
 
     lea  rdi, [rel gettext_domain_str]
     lea  rsi, [rel g_locale_dir_buf]

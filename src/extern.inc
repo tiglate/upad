@@ -233,7 +233,8 @@ extern write
 extern close
 extern lseek
 extern readlink
-extern access
+extern opendir   ; DIR *opendir(const char*) -- i18n.asm's setup_i18n uses this (NULL result) to check <exe_dir>/locale is an actual directory, not just any path that happens to exist
+extern closedir
 extern strlen
 extern strcmp
 extern memcpy
