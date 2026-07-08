@@ -1,0 +1,265 @@
+# Simplified Chinese translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: zh_CN\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "查找"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "查找内容:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "查找下一个(_F)"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "取消(_C)"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "转到行"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "行号:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "确定(_O)"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "文件(_F)"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "新建(_N)"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "打开(_O)..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "保存(_S)"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "另存为(_A)..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "页面设置(_U)..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "打印(_P)..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "退出(_X)"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "编辑(_E)"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "撤消(_U)"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "剪切(_T)"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "复制(_C)"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "粘贴(_P)"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "删除(_L)"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "查找(_F)..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "查找下一个(_N)"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "替换(_R)..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "转到(_G)..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "全选(_A)"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "时间/日期(_D)"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "格式(_O)"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "自动换行(_W)"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "字体(_F)..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "查看(_V)"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "状态栏(_S)"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "深色模式(_M)"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "行号(_L)"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "帮助(_H)"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "查看帮助(_V)"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "关于 UnbloatedPad(_A)"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "替换"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "替换为:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "替换(_R)"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "全部替换(_A)"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "这是经典记事本在 Linux 上的纯 x86-64 汇编重制版，直接基于 GTK4 和 libadwaita 的 C ABI 构建（没有任何 C 胶水代码）。由 Tiglate Pileser III（tiglate）在 AI 协助下创作。"
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "是否以原始编码保存?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "此文件不是以 UTF-8 文本形式打开的。请选择是按原始编码保存，还是将文档转换为 UTF-8。"
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "保留原始编码(_K)"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "转换为 UTF-8(_C)"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "无法打开文件"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "此文件的内容看起来既不是有效的 UTF-8 文本，也不是 UTF-16 文本，而且 uchardet 也无法识别它可能采用的旧式 8 位编码（或者猜测有误）。"
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "无法保存文件"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "此文档包含一些字符，无法转换回最初打开时使用的编码。未保存任何内容 -- 请重试，并改为选择转换为 UTF-8。"
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "打开文件"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "文件另存为"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "无标题"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "无法读取文件"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "浅色模式(_M)"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "UnbloatedPad 文档"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "无法打印"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "打印作业未能完成。请检查打印机连接，然后重试。"
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "第 %d 行，第 %d 列"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "是否保存更改?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "此文档包含未保存的更改。如果不保存就关闭，这些更改将会丢失。"
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "放弃(_D)"

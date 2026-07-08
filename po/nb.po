@@ -1,0 +1,265 @@
+# Norwegian Bokmål translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: nb\n"
+"Language: nb\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "Finn"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "Finn hva:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "_Finn neste"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "_Avbryt"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "Gå til linje"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "Linjenummer:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_OK"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_Fil"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_Ny"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_Åpne..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "_Lagre"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "Lagre _som..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "Side_oppsett..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "_Skriv ut..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "Av_slutt"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_Rediger"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "_Angre"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "Klipp _ut"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "_Kopier"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "_Lim inn"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "_Slett"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_Finn..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "Finn _neste"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "_Erstatt..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "_Gå til..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "Velg _alt"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "Klokkeslett/_dato"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "F_ormat"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "_Tekstbryting"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "Skrif_t..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_Vis"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "_Statuslinje"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "Mørk _modus"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_Linjenumre"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "_Hjelp"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "_Vis hjelp"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_Om UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "Erstatt"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "Erstatt med:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "_Erstatt"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "Erstatt _alle"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "En ren x86-64-assembly-gjenskaping av klassisk Notisblokk for Linux, bygget direkte på C-ABI-et til GTK4 og libadwaita (ingen C-limkode). Laget av Tiglate Pileser III (tiglate) med hjelp fra KI."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "Lagre i opprinnelig tegnkoding?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "Denne filen ble ikke åpnet som UTF-8-tekst. Velg om du vil lagre den tilbake i den opprinnelige tegnkodingen, eller konvertere dokumentet til UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_Behold opprinnelig tegnkoding"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "_Konverter til UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "Kunne ikke åpne filen"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "Innholdet i denne filen ser ikke ut som gyldig UTF-8- eller UTF-16-tekst, og uchardet klarte ikke å identifisere (eller gjettet feil på) hvilken eldre 8-bits tegnkoding det kan være."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "Kunne ikke lagre filen"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "Dette dokumentet inneholder tegn som ikke kan konverteres tilbake til tegnkodingen det opprinnelig ble åpnet med. Ingenting ble lagret -- prøv igjen og velg å konvertere til UTF-8 i stedet."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "Åpne fil"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "Lagre fil som"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "Uten navn"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "Kunne ikke lese filen"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "Lys _modus"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "UnbloatedPad-dokument"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "Kunne ikke skrive ut"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "Utskriftsjobben kunne ikke fullføres. Kontroller skrivertilkoblingen og prøv igjen."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "Ln %d, kol %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "Lagre endringer?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "Dette dokumentet har ulagrede endringer. Hvis du lukker uten å lagre, går disse endringene tapt."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_Forkast"

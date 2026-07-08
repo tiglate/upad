@@ -148,8 +148,10 @@ re-verify with a small C program before trusting these constants.
 
 Built on GNU gettext + GLib, following the system locale (`$LANG`/
 `$LANGUAGE`) -- there's no in-app language switcher/settings subsystem.
-Test a specific language with `LANGUAGE=pt_BR ./upad` (also `es`, `it`)
-without needing that locale actually installed on the system.
+Test a specific language with `LANGUAGE=pt_BR ./upad` (also `es`, `it`,
+`pt_PT`, `fr`, `de`, `nl`, `pl`, `hr`, `ro`, `el`, `is`, `nb`, `sv`, `fi`,
+`ru`, `uk`, `he`, `ar`, `ja`, `ko`, `hi`, `zh_CN`) without needing that
+locale actually installed on the system.
 
 - Every user-visible string in `src/*.asm` is a plain `db "...", 0` marked
   with a trailing `; i18n:` comment (optionally followed by a note, e.g.
@@ -183,8 +185,9 @@ without needing that locale actually installed on the system.
   `<property translatable="yes">` and GMenu `<attribute
   translatable="yes">` natively) via `msgcat`, writing `po/upad.pot`.
   After changing/adding a translatable string: `make pot`, then
-  `msgmerge --update po/<lang>.po po/upad.pot` for each of `po/pt_BR.po`,
-  `po/es.po`, `po/it.po`, then fill in any new/fuzzy entries by hand.
+  `msgmerge --update po/<lang>.po po/upad.pot` for each `po/*.po` file
+  (one per `LINGUAS` entry in the Makefile), then fill in any new/fuzzy
+  entries by hand.
 
 ## Known limitations (don't "fix" without being asked)
 

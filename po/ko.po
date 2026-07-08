@@ -1,0 +1,265 @@
+# Korean translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: ko\n"
+"Language: ko\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "찾기"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "찾을 내용:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "다음 찾기(_F)"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "취소(_C)"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "줄로 이동"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "줄 번호:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "확인(_O)"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "파일(_F)"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "새로 만들기(_N)"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "열기(_O)..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "저장(_S)"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "다른 이름으로 저장(_A)..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "페이지 설정(_U)..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "인쇄(_P)..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "끝내기(_X)"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "편집(_E)"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "실행 취소(_U)"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "잘라내기(_T)"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "복사(_C)"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "붙여넣기(_P)"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "삭제(_L)"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "찾기(_F)..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "다음 찾기(_N)"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "바꾸기(_R)..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "이동(_G)..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "모두 선택(_A)"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "날짜/시간(_D)"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "서식(_O)"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "자동 줄 바꿈(_W)"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "글꼴(_F)..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "보기(_V)"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "상태 표시줄(_S)"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "다크 모드(_M)"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "줄 번호(_L)"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "도움말(_H)"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "도움말 보기(_V)"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "UnbloatedPad 정보(_A)"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "바꾸기"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "바꿀 내용:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "바꾸기(_R)"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "모두 바꾸기(_A)"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "Linux를 위한 클래식 메모장을 GTK4와 libadwaita의 C ABI를 직접 사용하여(별도의 C 글루 코드 없이) 순수한 x86-64 어셈블리로 재현한 프로그램입니다. Tiglate Pileser III(tiglate)가 AI의 도움을 받아 제작했습니다."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "원본 인코딩으로 저장하시겠습니까?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "이 파일은 UTF-8 텍스트로 열리지 않았습니다. 원본 인코딩으로 다시 저장할지, 문서를 UTF-8로 변환할지 선택하세요."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "원본 인코딩 유지(_K)"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "UTF-8로 변환(_C)"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "파일을 열 수 없습니다"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "이 파일의 내용은 올바른 UTF-8 또는 UTF-16 텍스트로 보이지 않으며, uchardet도 어떤 레거시 8비트 인코딩인지 식별하지 못했습니다(또는 잘못 추측했습니다)."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "파일을 저장할 수 없습니다"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "이 문서에는 원래 열었던 인코딩으로 다시 변환할 수 없는 문자가 포함되어 있습니다. 아무것도 저장되지 않았습니다 -- 다시 시도하여 대신 UTF-8로 변환하도록 선택하세요."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "파일 열기"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "다른 이름으로 파일 저장"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "제목 없음"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "파일을 읽을 수 없습니다"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "라이트 모드(_M)"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "UnbloatedPad 문서"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "인쇄할 수 없습니다"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "인쇄 작업을 완료할 수 없습니다. 프린터 연결을 확인하고 다시 시도하세요."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "줄 %d, 열 %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "변경 사항을 저장하시겠습니까?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "이 문서에는 저장되지 않은 변경 사항이 있습니다. 저장하지 않고 닫으면 이 변경 사항은 사라집니다."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "삭제(_D)"

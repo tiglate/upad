@@ -1,0 +1,265 @@
+# Romanian translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: ro\n"
+"Language: ro\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : (n==0 || (n%100 > 0 && n%100 < 20)) ? 1 : 2);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "Găsire"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "Găsește:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "Găsește ur_mătorul"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "A_nulează"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "Salt la linie"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "Număr linie:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_OK"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_Fișier"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_Nou"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_Deschide..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "_Salvează"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "Salvează c_a..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "Configurare _pagină..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "_Tipărește..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "Ieșir_e"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_Editare"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "An_ulează"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "_Decupează"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "C_opiază"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "Li_pește"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "Șter_ge"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_Găsește..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "Găsește ur_mătorul"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "_Înlocuiește..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "Sal_t la..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "Selecte_ază tot"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "Oră/_dată"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "F_ormat"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "_Încadrare text"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "_Font..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_Vizualizare"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "Bară de _stare"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "_Mod întunecat"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "Numere de _linie"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "_Ajutor"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "_Vizualizează ajutorul"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_Despre UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "Înlocuire"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "Înlocuiește cu:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "_Înlocuiește"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "Înlocuiește t_ot"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "O recreare pură în limbaj de asamblare x86-64 a clasicului Notepad pentru Linux, construită direct pe ABI-ul C al GTK4 și libadwaita (fără cod C intermediar). Creat de Tiglate Pileser III (tiglate) cu asistență din partea inteligenței artificiale."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "Salvați în codificarea originală?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "Acest fișier nu a fost deschis ca text UTF-8. Alegeți dacă doriți să îl salvați înapoi în codificarea originală sau să convertiți documentul în UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_Păstrează codificarea originală"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "Con_vertește în UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "Fișierul nu a putut fi deschis"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "Conținutul acestui fișier nu pare a fi text UTF-8 sau UTF-16 valid, iar uchardet nu a putut identifica (sau a ghicit greșit) codificarea veche pe 8 biți care ar putea fi utilizată."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "Fișierul nu a putut fi salvat"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "Acest document conține caractere care nu pot fi convertite înapoi în codificarea cu care a fost deschis inițial. Nu s-a salvat nimic -- încercați din nou și alegeți să convertiți în UTF-8."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "Deschide fișier"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "Salvează fișierul ca"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "Fără titlu"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "Fișierul nu a putut fi citit"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "Mod _luminos"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "Document UnbloatedPad"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "Imprimarea nu a putut fi efectuată"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "Sarcina de imprimare nu a putut fi finalizată. Verificați conexiunea imprimantei și încercați din nou."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "Lin %d, Col %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "Salvați modificările?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "Acest document are modificări nesalvate. Dacă îl închideți fără să salvați, aceste modificări vor fi pierdute."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_Renunță"

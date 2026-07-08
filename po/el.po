@@ -1,0 +1,265 @@
+# Greek translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: el\n"
+"Language: el\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "Εύρεση"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "Εύρεση:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "Εύρεση ε_πόμενου"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "Ά_κυρο"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "Μετάβαση σε γραμμή"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "Αριθμός γραμμής:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_ΟΚ"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_Αρχείο"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_Νέο"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "Ά_νοιγμα..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "Απο_θήκευση"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "Αποθήκευση _ως..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "Διαμόρφωση _σελίδας..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "Ε_κτύπωση..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "Έ_ξοδος"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_Επεξεργασία"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "Α_ναίρεση"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "Α_ποκοπή"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "Α_ντιγραφή"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "Επι_κόλληση"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "Δια_γραφή"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_Εύρεση..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "Εύρεση ε_πόμενου"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "Α_ντικατάσταση..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "Μετά_βαση σε..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "Επιλογή ό_λων"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "Ώρα/Η_μερομηνία"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "_Μορφή"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "Ανα_δίπλωση λέξεων"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "_Γραμματοσειρά..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "Π_ροβολή"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "Γραμμή _κατάστασης"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "Σκο_τεινή λειτουργία"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_Αριθμοί γραμμών"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "_Βοήθεια"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "Π_ροβολή βοήθειας"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "Πε_ρί του UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "Αντικατάσταση"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "Αντικατάσταση με:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "Α_ντικατάσταση"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "Αντικατάσταση ό_λων"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "Μια αναδημιουργία του κλασικού Σημειωματάριου (Notepad) για Linux, γραμμένη εξ ολοκλήρου σε γλώσσα assembly x86-64, χτισμένη απευθείας πάνω στο C ABI των GTK4 και libadwaita (χωρίς ενδιάμεσο κώδικα C). Δημιουργήθηκε από τον Tiglate Pileser III (tiglate) με βοήθεια τεχνητής νοημοσύνης."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "Αποθήκευση στην αρχική κωδικοποίηση;"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "Αυτό το αρχείο δεν ανοίχτηκε ως κείμενο UTF-8. Επιλέξτε αν θέλετε να το αποθηκεύσετε ξανά στην αρχική του κωδικοποίηση ή να μετατρέψετε το έγγραφο σε UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_Διατήρηση αρχικής κωδικοποίησης"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "_Μετατροπή σε UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "Δεν ήταν δυνατό το άνοιγμα του αρχείου"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "Το περιεχόμενο αυτού του αρχείου δεν μοιάζει με έγκυρο κείμενο UTF-8 ή UTF-16, και το uchardet δεν μπόρεσε να αναγνωρίσει (ή έκανε λάθος εικασία για) την τυχόν παλαιότερη κωδικοποίηση 8 bit που μπορεί να χρησιμοποιείται."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "Δεν ήταν δυνατή η αποθήκευση του αρχείου"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "Αυτό το έγγραφο περιέχει χαρακτήρες που δεν μπορούν να μετατραπούν πίσω στην κωδικοποίηση με την οποία ανοίχτηκε αρχικά. Δεν αποθηκεύτηκε τίποτα -- δοκιμάστε ξανά και επιλέξτε μετατροπή σε UTF-8."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "Άνοιγμα αρχείου"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "Αποθήκευση αρχείου ως"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "Χωρίς τίτλο"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "Δεν ήταν δυνατή η ανάγνωση του αρχείου"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "Φωτεινή _λειτουργία"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "Έγγραφο του UnbloatedPad"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "Δεν ήταν δυνατή η εκτύπωση"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "Η εργασία εκτύπωσης δεν ολοκληρώθηκε. Ελέγξτε τη σύνδεση του εκτυπωτή και δοκιμάστε ξανά."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "Γρ %d, Στ %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "Αποθήκευση αλλαγών;"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "Αυτό το έγγραφο περιέχει μη αποθηκευμένες αλλαγές. Αν το κλείσετε χωρίς αποθήκευση, αυτές οι αλλαγές θα χαθούν."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "Απόρρι_ψη"
