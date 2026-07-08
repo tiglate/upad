@@ -1,0 +1,265 @@
+# Hebrew translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: he\n"
+"Language: he\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "חיפוש"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "חיפוש אחר:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "_חפש את הבא"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "_ביטול"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "מעבר לשורה"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "מספר שורה:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_אישור"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_קובץ"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_חדש"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_פתיחה..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "_שמירה"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "שמירה _בשם..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "הגדרות _עמוד..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "_הדפסה..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "יצי_אה"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_עריכה"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "_ביטול"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "_גזירה"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "ה_עתקה"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "ה_דבקה"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "מחי_קה"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_חיפוש..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "חיפוש ה_בא"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "ה_חלפה..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "_מעבר אל..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "בחירת ה_כול"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "תאריך/_שעה"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "ת_בנית"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "_גלישת מילים"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "_גופן..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_תצוגה"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "שורת _מצב"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "מצב _כהה"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_מספרי שורות"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "_עזרה"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "הצג _עזרה"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_אודות UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "החלפה"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "החלפה ב:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "ה_חלפה"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "החלפת ה_כול"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "שחזור טהור של פנקס הרשימות הקלאסי עבור לינוקס, כתוב כולו בשפת assembly x86-64 טהורה, הפועל ישירות מול ה-C ABI של GTK4 ו-libadwaita (ללא קוד עזר בשפת C). נוצר על ידי Tiglate Pileser III (tiglate) בסיוע בינה מלאכותית."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "לשמור בקידוד המקורי?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "קובץ זה לא נפתח כטקסט UTF-8. בחר/י אם לשמור אותו בחזרה בקידוד המקורי שלו, או להמיר את המסמך ל-UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_שמירה על הקידוד המקורי"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "ה_מרה ל-UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "לא ניתן היה לפתוח את הקובץ"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "תוכן הקובץ הזה אינו נראה כטקסט UTF-8 או UTF-16 תקין, ו-uchardet לא הצליח לזהות (או ניחש בטעות) איזה קידוד ישן בן 8 סיביות זה עשוי להיות."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "לא ניתן היה לשמור את הקובץ"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "מסמך זה מכיל תווים שלא ניתן להמיר בחזרה לקידוד שבו הוא נפתח במקור. שום דבר לא נשמר -- נסה/י שוב ובחר/י להמיר ל-UTF-8 במקום זאת."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "פתיחת קובץ"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "שמירת קובץ בשם"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "ללא שם"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "לא ניתן היה לקרוא את הקובץ"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "מצב _בהיר"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "מסמך UnbloatedPad"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "לא ניתן היה להדפיס"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "לא ניתן היה להשלים את משימת ההדפסה. בדוק/בדקי את חיבור המדפסת ונסה/י שוב."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "שורה %d, עמודה %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "לשמור שינויים?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "למסמך זה יש שינויים שלא נשמרו. אם תסגור/תסגרי בלי לשמור, השינויים הללו יאבדו."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_אל תשמור"

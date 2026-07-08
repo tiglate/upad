@@ -1,0 +1,265 @@
+# Japanese translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: ja\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "検索"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "検索する文字列:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "次を検索(_F)"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "キャンセル(_C)"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "指定行へ移動"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "行番号:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "OK(_O)"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "ファイル(_F)"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "新規作成(_N)"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "開く(_O)..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "上書き保存(_S)"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "名前を付けて保存(_A)..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "ページ設定(_U)..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "印刷(_P)..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "終了(_X)"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "編集(_E)"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "元に戻す(_U)"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "切り取り(_T)"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "コピー(_C)"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "貼り付け(_P)"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "削除(_L)"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "検索(_F)..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "次を検索(_N)"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "置換(_R)..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "指定行へ移動(_G)..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "すべて選択(_A)"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "日付と時刻(_D)"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "書式(_O)"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "右端で折り返す(_W)"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "フォント(_F)..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "表示(_V)"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "ステータスバー(_S)"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "ダークモード(_M)"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "行番号(_L)"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "ヘルプ(_H)"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "ヘルプを表示(_V)"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "UnbloatedPad について(_A)"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "置換"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "置換後の文字列:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "置換(_R)"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "すべて置換(_A)"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "Linux 向けのクラシックなメモ帳を、GTK4 と libadwaita の C ABI に直接基づいて純粋な x86-64 アセンブリで(C言語のグルーコードなしに)再現したものです。Tiglate Pileser III (tiglate) が AI の支援を受けて制作しました。"
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "元のエンコーディングで保存しますか?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "このファイルは UTF-8 テキストとして開かれていません。元のエンコーディングのまま保存するか、ドキュメントを UTF-8 に変換するかを選択してください。"
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "元のエンコーディングを維持(_K)"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "UTF-8 に変換(_C)"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "ファイルを開けませんでした"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "このファイルの内容は有効な UTF-8 または UTF-16 テキストには見えず、uchardet も想定される旧来の 8 ビット エンコーディングを特定できませんでした(または誤って推測しました)。"
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "ファイルを保存できませんでした"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "このドキュメントには、元々開いたときのエンコーディングに戻して変換できない文字が含まれています。何も保存されませんでした -- もう一度試して、代わりに UTF-8 への変換を選択してください。"
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "ファイルを開く"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "名前を付けてファイルを保存"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "無題"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "ファイルを読み込めませんでした"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "ライトモード(_M)"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "UnbloatedPad ドキュメント"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "印刷できませんでした"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "印刷ジョブを完了できませんでした。プリンターの接続を確認して、もう一度お試しください。"
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "行 %d、列 %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "変更を保存しますか?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "このドキュメントには保存されていない変更があります。保存せずに閉じると、これらの変更は失われます。"
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "破棄(_D)"

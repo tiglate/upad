@@ -63,7 +63,7 @@ UI_MANIFEST := $(UI_DIR)/ui.gresource.xml
 # $(PREFIX)/share/locale/<lang>/LC_MESSAGES/upad.mo, the system default
 # glibc's gettext() already searches on its own, so setup_i18n never even
 # calls bindtextdomain in that case.
-LINGUAS      := pt_BR es it
+LINGUAS      := pt_BR es it pt_PT fr de nl pl hr ro el is nb sv fi ru uk he ar ja ko hi zh_CN
 PO_DIR       := po
 LOCALE_DIR   := locale
 MO_FILES     := $(foreach lang,$(LINGUAS),$(LOCALE_DIR)/$(lang)/LC_MESSAGES/upad.mo)

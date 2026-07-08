@@ -1,0 +1,265 @@
+# Arabic translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: ar\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 ? 4 : 5);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "بحث"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "البحث عن:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "_البحث عن التالي"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "_إلغاء"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "الانتقال إلى سطر"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "رقم السطر:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_موافق"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_ملف"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_جديد"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_فتح..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "_حفظ"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "حفظ با_سم..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "إعداد ال_صفحة..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "_طباعة..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "_خروج"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_تحرير"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "_تراجع"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "_قص"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "_نسخ"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "ل_صق"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "_حذف"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_بحث..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "البحث عن ال_تالي"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "ا_ستبدال..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "ال_انتقال إلى..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "تحديد ال_كل"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "التاريخ/_الوقت"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "_تنسيق"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "ال_تفاف الكلمات"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "ال_خط..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_عرض"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "_شريط الحالة"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "الوضع ال_داكن"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_أرقام الأسطر"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "_تعليمات"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "عرض ال_تعليمات"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_حول UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "استبدال"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "الاستبدال بـ:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "ا_ستبدال"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "استبدال ال_كل"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "إعادة إنشاء نقي لمفكرة Notepad الكلاسيكية على لينكس، مكتوبة بالكامل بلغة التجميع x86-64 الخالصة، تعمل مباشرة فوق واجهة C الخاصة بـ GTK4 وlibadwaita (دون أي كود وسيط بلغة C). من إنشاء Tiglate Pileser III (tiglate) بمساعدة الذكاء الاصطناعي."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "هل تريد الحفظ بالترميز الأصلي؟"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "لم يُفتح هذا الملف كنص بترميز UTF-8. اختر ما إذا كنت تريد حفظه مجددًا بترميزه الأصلي، أو تحويل المستند إلى UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "الإب_قاء على الترميز الأصلي"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "_تحويل إلى UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "تعذّر فتح الملف"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "لا يبدو أن محتوى هذا الملف نص UTF-8 أو UTF-16 صالح، ولم تتمكن أداة uchardet من تحديد الترميز القديم ذي 8 بتّات المحتمل (أو أنها خمّنته بشكل خاطئ)."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "تعذّر حفظ الملف"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "يحتوي هذا المستند على أحرف يتعذّر تحويلها مرة أخرى إلى الترميز الذي فُتح به المستند في الأصل. لم يتم حفظ أي شيء -- حاول مجددًا واختر التحويل إلى UTF-8 بدلاً من ذلك."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "فتح ملف"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "حفظ الملف باسم"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "بلا عنوان"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "تعذّر قراءة الملف"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "الوضع ال_فاتح"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "مستند UnbloatedPad"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "تعذّرت الطباعة"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "تعذّر إكمال مهمة الطباعة. تحقّق من اتصال الطابعة وحاول مجددًا."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "سطر %d، عمود %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "هل تريد حفظ التغييرات؟"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "يحتوي هذا المستند على تغييرات غير محفوظة. إذا أغلقته دون حفظ، فستُفقد هذه التغييرات."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_تجاهل"

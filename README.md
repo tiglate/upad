@@ -64,9 +64,13 @@ Plus the details that make it feel like a real app, not a toy:
 - 🌗 **Dark Mode**, a live "Ln X, Col Y" status bar, and all the
   keyboard shortcuts you'd expect (`Ctrl+N/O/S`, `Ctrl+Shift+S`, `Ctrl+F`,
   `F3`, `Ctrl+H`, `Ctrl+G`, `F5`, ...).
-- 🗣️ **Translated** into Brazilian Portuguese, Spanish, and Italian (on
-  top of English), via GNU gettext — follows your desktop's own locale
-  automatically, no in-app language switcher needed.
+- 🗣️ **Translated** into 22 languages besides English — Brazilian
+  Portuguese, European Portuguese, Spanish, Italian, French, German,
+  Dutch, Polish, Croatian, Romanian, Greek, Icelandic, Norwegian
+  (Bokmål), Swedish, Finnish, Russian, Ukrainian, Hebrew, Arabic,
+  Japanese, Korean, Hindi, and Simplified Chinese — via GNU gettext;
+  follows your desktop's own locale automatically, no in-app language
+  switcher needed.
 
 ## 👤 Author
 
@@ -276,9 +280,10 @@ re-verify with a two-line C program before trusting these constants.
   theme-aware color — chosen to stay readable in both light and dark mode
   without extra plumbing.
 - 🗣️ **Translations follow the system locale only** — there's no in-app
-  language menu/setting; override via `LANGUAGE=pt_BR ./upad` (also `es`,
-  `it`) for testing a specific one regardless of your actual desktop
-  locale.
+  language menu/setting; override via `LANGUAGE=pt_BR ./upad` (also
+  `es`, `it`, `pt_PT`, `fr`, `de`, `nl`, `pl`, `hr`, `ro`, `el`, `is`,
+  `nb`, `sv`, `fi`, `ru`, `uk`, `he`, `ar`, `ja`, `ko`, `hi`, `zh_CN`)
+  for testing a specific one regardless of your actual desktop locale.
 
 ---
 

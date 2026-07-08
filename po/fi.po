@@ -1,0 +1,265 @@
+# Finnish translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: fi\n"
+"Language: fi\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "Etsi"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "Etsittävä:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "Etsi _seuraava"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "_Peruuta"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "Siirry riville"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "Rivinumero:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_OK"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_Tiedosto"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_Uusi"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_Avaa..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "_Tallenna"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "Tallenna _nimellä..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "Sivun _asetukset..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "_Tulosta..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "_Lopeta"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_Muokkaa"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "_Kumoa"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "_Leikkaa"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "_Kopioi"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "L_iitä"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "_Poista"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_Etsi..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "Etsi _seuraava"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "_Korvaa..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "_Siirry..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "Valitse k_aikki"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "Aika/_päiväys"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "_Muotoilu"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "_Rivitys"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "_Fontti..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_Näytä"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "_Tilarivi"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "Tumma _tila"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_Rivinumerot"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "O_hje"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "_Näytä ohje"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_Tietoja UnbloatedPadista"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "Korvaa"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "Korvaa tällä:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "_Korvaa"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "Korvaa k_aikki"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "Puhtaasti x86-64-konekielellä (assembly) toteutettu uudelleenluonti klassisesta Notepadista Linuxille, rakennettu suoraan GTK4:n ja libadwaitan C-ABI:n päälle (ei C-liimakoodia). Tekijä Tiglate Pileser III (tiglate) tekoälyn avustuksella."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "Tallennetaanko alkuperäisellä merkistöllä?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "Tätä tiedostoa ei avattu UTF-8-tekstinä. Valitse, tallennetaanko se takaisin alkuperäisellä merkistöllä vai muunnetaanko asiakirja UTF-8:ksi."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_Säilytä alkuperäinen merkistö"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "_Muunna UTF-8:ksi"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "Tiedostoa ei voitu avata"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "Tämän tiedoston sisältö ei näytä kelvolliselta UTF-8- tai UTF-16-tekstiltä, eikä uchardet pystynyt tunnistamaan (tai arvasi väärin) mahdollista vanhempaa 8-bittistä merkistöä."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "Tiedostoa ei voitu tallentaa"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "Tämä asiakirja sisältää merkkejä, joita ei voida muuntaa takaisin merkistöön, jolla se alun perin avattiin. Mitään ei tallennettu -- yritä uudelleen ja valitse sen sijaan muunnos UTF-8:ksi."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "Avaa tiedosto"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "Tallenna nimellä"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "Nimetön"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "Tiedostoa ei voitu lukea"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "Vaalea _tila"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "UnbloatedPad-asiakirja"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "Tulostus epäonnistui"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "Tulostustyötä ei voitu suorittaa loppuun. Tarkista tulostimen yhteys ja yritä uudelleen."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "Ri %d, sar %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "Tallennetaanko muutokset?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "Tässä asiakirjassa on tallentamattomia muutoksia. Jos suljet tallentamatta, nämä muutokset menetetään."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_Hylkää"

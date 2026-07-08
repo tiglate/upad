@@ -1,0 +1,265 @@
+# Ukrainian translations for UnbloatedPad package.
+# Copyright (C) 2026 Tiglate Pileser III (tiglate)
+# This file is distributed under the same license as the UnbloatedPad package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: UnbloatedPad 0.4.0\n"
+"Report-Msgid-Bugs-To: https://github.com/tiglate/upad/issues\n"
+"POT-Creation-Date: 2026-07-05 00:00+0000\n"
+"PO-Revision-Date: 2026-07-07 00:00+0000\n"
+"Last-Translator: Tiglate Pileser III (tiglate)\n"
+"Language-Team: uk\n"
+"Language: uk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: ui/find.ui:4
+msgid "Find"
+msgstr "Знайти"
+
+#: ui/find.ui:20 ui/replace.ui:20
+msgid "Find what:"
+msgstr "Знайти:"
+
+#: ui/find.ui:36 ui/replace.ui:52
+msgid "_Find Next"
+msgstr "Знайти _далі"
+
+#: ui/find.ui:42 ui/goto.ui:49 ui/replace.ui:70
+msgid "_Cancel"
+msgstr "_Скасувати"
+
+#: ui/goto.ui:4
+msgid "Go To Line"
+msgstr "Перехід до рядка"
+
+#: ui/goto.ui:20
+msgid "Line number:"
+msgstr "Номер рядка:"
+
+#: ui/goto.ui:43
+msgid "_OK"
+msgstr "_Гаразд"
+
+#: ui/menu.ui:5
+msgid "_File"
+msgstr "_Файл"
+
+#: ui/menu.ui:8
+msgid "_New"
+msgstr "_Створити"
+
+#: ui/menu.ui:12
+msgid "_Open..."
+msgstr "_Відкрити..."
+
+#: ui/menu.ui:16
+msgid "_Save"
+msgstr "З_берегти"
+
+#: ui/menu.ui:20
+msgid "Save _As..."
+msgstr "Зберегти _як..."
+
+#: ui/menu.ui:26
+msgid "Page Set_up..."
+msgstr "Пара_метри сторінки..."
+
+#: ui/menu.ui:30
+msgid "_Print..."
+msgstr "Д_рук..."
+
+#: ui/menu.ui:36
+msgid "E_xit"
+msgstr "Ви_хід"
+
+#: ui/menu.ui:43
+msgid "_Edit"
+msgstr "_Редагування"
+
+#: ui/menu.ui:46
+msgid "_Undo"
+msgstr "_Скасувати"
+
+#: ui/menu.ui:52
+msgid "Cu_t"
+msgstr "Ви_різати"
+
+#: ui/menu.ui:56
+msgid "_Copy"
+msgstr "_Копіювати"
+
+#: ui/menu.ui:60
+msgid "_Paste"
+msgstr "Вст_авити"
+
+#: ui/menu.ui:64
+msgid "De_lete"
+msgstr "Ви_далити"
+
+#: ui/menu.ui:70
+msgid "_Find..."
+msgstr "_Знайти..."
+
+#: ui/menu.ui:74
+msgid "Find _Next"
+msgstr "Знайти _далі"
+
+#: ui/menu.ui:78
+msgid "_Replace..."
+msgstr "За_мінити..."
+
+#: ui/menu.ui:82
+msgid "_Go To..."
+msgstr "_Перейти..."
+
+#: ui/menu.ui:88
+msgid "Select _All"
+msgstr "Виділити _все"
+
+#: ui/menu.ui:92
+msgid "Time/_Date"
+msgstr "Час/_дата"
+
+#: ui/menu.ui:99
+msgid "F_ormat"
+msgstr "Ф_ормат"
+
+#: ui/menu.ui:101
+msgid "_Word Wrap"
+msgstr "_Перенесення слів"
+
+#: ui/menu.ui:105
+msgid "_Font..."
+msgstr "_Шрифт..."
+
+#: ui/menu.ui:111
+msgid "_View"
+msgstr "_Перегляд"
+
+#: ui/menu.ui:113
+msgid "_Status Bar"
+msgstr "Рядок с_тану"
+
+#: ui/menu.ui:117
+msgid "Dark _Mode"
+msgstr "Темний _режим"
+
+#: ui/menu.ui:121
+msgid "_Line Numbers"
+msgstr "_Номери рядків"
+
+#: ui/menu.ui:127
+msgid "_Help"
+msgstr "_Довідка"
+
+#: ui/menu.ui:129
+msgid "_View Help"
+msgstr "Пере_гляд довідки"
+
+#: ui/menu.ui:133
+msgid "_About UnbloatedPad"
+msgstr "_Про UnbloatedPad"
+
+#: ui/replace.ui:4
+msgid "Replace"
+msgstr "Замінити"
+
+#: ui/replace.ui:36
+msgid "Replace with:"
+msgstr "Замінити на:"
+
+#: ui/replace.ui:58
+msgid "_Replace"
+msgstr "За_мінити"
+
+#: ui/replace.ui:64
+msgid "Replace _All"
+msgstr "Замінити _все"
+
+#: src/about.asm:33
+msgid "A pure x86-64 assembly recreation of classic Notepad for Linux, built directly on the GTK4 and libadwaita C ABI (no C glue code). Created by Tiglate Pileser III (tiglate) with AI assistance."
+msgstr "Відтворення класичного Блокнота для Linux, написане повністю чистою асемблерною мовою x86-64, яке напряму використовує C ABI GTK4 та libadwaita (без допоміжного коду на C). Створено Tiglate Pileser III (tiglate) за допомогою ШІ."
+
+#: src/encoding.asm:85
+msgid "Save in original encoding?"
+msgstr "Зберегти у початковому кодуванні?"
+
+#: src/encoding.asm:86
+msgid "This file wasn't opened as UTF-8 text. Choose whether to save it back in its original encoding, or convert the document to UTF-8."
+msgstr "Цей файл не було відкрито як текст у кодуванні UTF-8. Виберіть, чи зберегти його назад у початковому кодуванні, чи перетворити документ на UTF-8."
+
+#: src/encoding.asm:95
+msgid "_Keep Original Encoding"
+msgstr "_Зберегти початкове кодування"
+
+#: src/encoding.asm:97
+msgid "_Convert to UTF-8"
+msgstr "_Перетворити на UTF-8"
+
+#: src/encoding.asm:99 src/fileio.asm:58
+msgid "Could not open file"
+msgstr "Не вдалося відкрити файл"
+
+#: src/encoding.asm:100
+msgid "This file's contents don't look like valid UTF-8 or UTF-16 text, and uchardet couldn't identify (or guessed wrong about) whatever legacy 8-bit encoding it might be."
+msgstr "Вміст цього файлу не схожий на дійсний текст у кодуванні UTF-8 чи UTF-16, а uchardet не зміг визначити (або визначив неправильно), яким саме застарілим 8-бітним кодуванням він може бути."
+
+#: src/encoding.asm:101 src/fileio.asm:60
+msgid "Could not save file"
+msgstr "Не вдалося зберегти файл"
+
+#: src/encoding.asm:102
+msgid "This document contains characters that can't be converted back to the encoding it was originally opened with. Nothing was saved -- try again and choose to convert to UTF-8 instead."
+msgstr "Цей документ містить символи, які неможливо перетворити назад на кодування, у якому його було відкрито спочатку. Нічого не було збережено -- спробуйте ще раз і виберіть перетворення на UTF-8."
+
+#: src/fileio.asm:52
+msgid "Open File"
+msgstr "Відкрити файл"
+
+#: src/fileio.asm:53
+msgid "Save File As"
+msgstr "Зберегти файл як"
+
+#: src/fileio.asm:54
+msgid "Untitled"
+msgstr "Без назви"
+
+#: src/fileio.asm:59
+msgid "Could not read file"
+msgstr "Не вдалося прочитати файл"
+
+#: src/format.asm:40
+msgid "Light _Mode"
+msgstr "_Світлий режим"
+
+#: src/printing.asm:51
+msgid "UnbloatedPad Document"
+msgstr "Документ UnbloatedPad"
+
+#: src/printing.asm:57
+msgid "Could not print"
+msgstr "Не вдалося надрукувати"
+
+#: src/printing.asm:58
+msgid "The print job could not be completed. Check the printer connection and try again."
+msgstr "Завдання друку не вдалося завершити. Перевірте з'єднання з принтером і спробуйте ще раз."
+
+#: src/statusbar.asm:20
+msgid "Ln %d, Col %d"
+msgstr "Ряд %d, Стб %d"
+
+#: src/unsaved.asm:55
+msgid "Save changes?"
+msgstr "Зберегти зміни?"
+
+#: src/unsaved.asm:56
+msgid "This document has unsaved changes. If you close without saving, those changes will be lost."
+msgstr "У цьому документі є незбережені зміни. Якщо ви закриєте його без збереження, ці зміни буде втрачено."
+
+#: src/unsaved.asm:66
+msgid "_Discard"
+msgstr "_Не зберігати"
