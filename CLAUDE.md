@@ -26,7 +26,7 @@ from assembly.
 make          # -> ./upad
 make run      # build (if needed) and launch it
 make clean    # remove build/ and the upad binary
-make release  # clean rebuild, then strip debug info -> a ~58% smaller ./upad
+make release  # clean rebuild, strip debug info, then UPX-compress -> a ~87% smaller ./upad
 ```
 
 Each `src/*.asm` is assembled independently (`nasm -f elf64 -g -F dwarf -I src/`)
@@ -51,10 +51,13 @@ on that release via `gh release upload`.
 
 Requires: `nasm`, `gcc`, `pkg-config`, `libgtk-4-dev`, `libadwaita-1-dev`
 (>= 1.5, for GTK 4.10-era Font/Find/Replace/Go To dialog APIs), `libuchardet-dev`
-(charset detection, `encoding.asm`), and the `gettext` package (`msgfmt`,
+(charset detection, `encoding.asm`), the `gettext` package (`msgfmt`,
 build-time only -- `xgettext`/`msgcat` are only needed for `make pot`, see
 below; there's no new *runtime* link dependency, since `setlocale`/
-`bindtextdomain`/`gettext` etc. are all built into glibc directly). If
+`bindtextdomain`/`gettext` etc. are all built into glibc directly), and
+`upx` (the `upx-ucl` package) -- only needed by `make release`/`make
+install`/`make deb` to compress the stripped binary, not by a plain
+`make`/`make run`. If
 `pkg-config` can't find `gtk4`/`libadwaita-1`/`uchardet` even though
 installed, point `PKG_CONFIG_PATH` at wherever `find /usr/lib -name
 'gtk4.pc'` turns up.
