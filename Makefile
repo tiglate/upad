@@ -106,14 +106,22 @@ DEB_STAGE      := $(BUILD_DIR)/$(DEB_PKG)
 all: $(TARGET) $(MO_FILES)
 
 # Same binary as `all`, minus the DWARF debug info ASMFLAGS bakes in for
-# gdb -- that's the only thing `strip` removes here (it isn't loaded into
-# memory at runtime either way, only read by a debugger), so this is a
-# pure size win with no behavior change: roughly 115KB -> 49KB as of this
-# writing. Always rebuilds from a clean tree first, so the result can't
-# accidentally be a stripped copy of a stale/partial build.
+# gdb (that's the only thing `strip` removes here -- it isn't loaded into
+# memory at runtime either way, only read by a debugger), then further
+# squeezed by upx, which wraps the stripped ELF in a self-decompressing
+# stub (transparent at runtime: the kernel still just execs it, upx's
+# stub inflates the real image into memory first). Both steps are a pure
+# size win with no behavior change. upx isn't checked for up top like
+# nasm/pkg-config/glib-compile-resources/msgfmt are, since only this
+# target (and install/deb, which depend on it) need it -- plain `make`/
+# `make run` shouldn't fail on its absence. Always rebuilds from a clean
+# tree first, so the result can't accidentally be a stripped/compressed
+# copy of a stale/partial build.
 release: clean $(TARGET)
 	strip --strip-all $(TARGET)
-	@echo "Stripped release build: $(TARGET) ($$(ls -lh $(TARGET) | awk '{print $$5}')B)"
+	@command -v upx >/dev/null 2>&1 || { echo "upx not found (part of the \"upx-ucl\" package on Debian/Ubuntu) -- needed by \`make release\`/\`make install\`/\`make deb\` to compress the stripped binary" >&2; exit 1; }
+	upx --best --lzma $(TARGET)
+	@echo "Stripped + compressed release build: $(TARGET) ($$(ls -lh $(TARGET) | awk '{print $$5}')B)"
 
 $(TARGET): $(OBJECTS) $(BUILD_DIR)/ui_data.o
 	# -z noexecstack: every src/*.asm object carries its own

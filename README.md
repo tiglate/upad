@@ -96,11 +96,14 @@ no code shared between the two.
   behind the translations above; build-time only, no new runtime link
   dependency (`setlocale`/`bindtextdomain`/`gettext` are all already
   built into glibc)
+- **UPX** (`upx-ucl` on Debian/Ubuntu) — only needed for `make release`/
+  `make install`/`make deb`, to compress the stripped binary; not
+  required for a plain `make`/`make run`
 
 On Debian/Ubuntu/Zorin:
 
 ```bash
-sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev gettext
+sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-dev libuchardet-dev gettext upx-ucl
 ```
 
 ## 🔨 Build
@@ -109,7 +112,7 @@ sudo apt-get install nasm build-essential pkg-config libgtk-4-dev libadwaita-1-d
 make          # -> ./upad
 make run      # build (if needed) and launch it
 make clean    # remove build/ and the upad binary
-make release  # clean rebuild, then strip debug info -> a leaner ./upad
+make release  # clean rebuild, strip debug info, then UPX-compress -> a tiny ./upad
 ```
 
 Each `src/*.asm` is assembled independently (`nasm -f elf64 -g -F dwarf`)
@@ -118,8 +121,10 @@ into `build/*.o`, then linked in one step against
 
 The default build keeps DWARF debug info (handy for `gdb`), which makes
 up a big chunk of the binary on disk even though it's never loaded into
-memory at runtime. `make release` does a clean rebuild and strips it —
-📉 **~58% smaller** (115KB → 49KB as of this writing), no behavior change.
+memory at runtime. `make release` does a clean rebuild, strips it, then
+runs the result through UPX (a self-decompressing executable stub —
+transparent at runtime, the kernel still just execs it) —
+📉 **~87% smaller** (141KB → 18KB as of this writing), no behavior change.
 
 🔖 The version number has exactly one home: the `.version` file at the
 repo root — not the Makefile, not any `.asm` file. It feeds both `.deb`
